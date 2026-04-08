@@ -404,49 +404,14 @@
     </div>
 
     <div class="options-bar">
-        <div class="opt-group" id="addColorGroup">
-            <span class="opt-label">Added</span>
-            <div class="color-presets" data-target="add">
-                <button class="color-swatch active" data-color="#0d47a1" style="background:#0d47a1" title="Blue"></button>
-                <button class="color-swatch" data-color="#2ecc40" style="background:#2ecc40" title="Green"></button>
-                <button class="color-swatch" data-color="#1abc9c" style="background:#1abc9c" title="Teal"></button>
-                <button class="color-swatch" data-color="#9b59b6" style="background:#9b59b6" title="Purple"></button>
-                <button class="color-swatch" data-color="#f39c12" style="background:#f39c12" title="Orange"></button>
-                <input type="color" id="addColor" value="#0d47a1" title="Custom color">
-            </div>
-        </div>
-
-        <div class="opt-group" id="delColorGroup">
-            <span class="opt-label">Deleted</span>
-            <div class="color-presets" data-target="del">
-                <button class="color-swatch active" data-color="#e74c3c" style="background:#e74c3c" title="Red"></button>
-                <button class="color-swatch" data-color="#e84393" style="background:#e84393" title="Pink"></button>
-                <button class="color-swatch" data-color="#d35400" style="background:#d35400" title="Burnt Orange"></button>
-                <button class="color-swatch" data-color="#636e72" style="background:#636e72" title="Gray"></button>
-                <button class="color-swatch" data-color="#c0392b" style="background:#c0392b" title="Dark Red"></button>
-                <input type="color" id="delColor" value="#e74c3c" title="Custom color">
-            </div>
-        </div>
-
-        <div class="opt-group" id="commonColorGroup" style="display:none">
-            <span class="opt-label">Color</span>
-            <div class="color-presets" data-target="common">
-                <button class="color-swatch active" data-color="#0d47a1" style="background:#0d47a1" title="Blue"></button>
-                <button class="color-swatch" data-color="#e74c3c" style="background:#e74c3c" title="Red"></button>
-                <button class="color-swatch" data-color="#2ecc40" style="background:#2ecc40" title="Green"></button>
-                <button class="color-swatch" data-color="#9b59b6" style="background:#9b59b6" title="Purple"></button>
-                <button class="color-swatch" data-color="#f39c12" style="background:#f39c12" title="Orange"></button>
-                <input type="color" id="commonColor" value="#0d47a1" title="Custom color">
-            </div>
-        </div>
-
         <div class="opt-group">
-            <button class="toggle-btn" id="commonColorBtn" title="Use same color for both">Common</button>
-            <button class="toggle-btn" id="ignoreCaseBtn" title="Ignore case differences">Aa</button>
-            <button class="toggle-btn" id="ignorePunctBtn" title="Ignore punctuation differences">.,!</button>
+            <div class="font-control">
+                <label>Aa</label>
+                <input type="range" id="fontSize" min="10" max="22" value="14" title="Font size">
+            </div>
         </div>
 
-        <div class="opt-group">
+        <div class="opt-group" style="margin-left:auto">
             <div class="seg-control" id="diffModeCtrl">
                 <button class="seg-btn active" data-value="word">Word</button>
                 <button class="seg-btn" data-value="sentence">Sentence</button>
@@ -458,9 +423,47 @@
         </div>
 
         <div class="opt-group">
-            <div class="font-control">
-                <label>Aa</label>
-                <input type="range" id="fontSize" min="10" max="22" value="14" title="Font size">
+            <button class="toggle-btn" id="ignoreCaseBtn" title="Ignore case differences">Aa</button>
+            <button class="toggle-btn" id="ignorePunctBtn" title="Ignore punctuation differences">.,!</button>
+        </div>
+
+        <div class="opt-group">
+            <button class="toggle-btn active" id="commonColorBtn" title="Use same color for both">Common Colour</button>
+        </div>
+
+        <div class="opt-group" id="addColorGroup" style="display:none">
+            <span class="opt-label">Added</span>
+            <div class="color-presets" data-target="add">
+                <button class="color-swatch active" data-color="#0d47a1" style="background:#0d47a1" title="Blue"></button>
+                <button class="color-swatch" data-color="#2ecc40" style="background:#2ecc40" title="Green"></button>
+                <button class="color-swatch" data-color="#1abc9c" style="background:#1abc9c" title="Teal"></button>
+                <button class="color-swatch" data-color="#9b59b6" style="background:#9b59b6" title="Purple"></button>
+                <button class="color-swatch" data-color="#f39c12" style="background:#f39c12" title="Orange"></button>
+                <input type="color" id="addColor" value="#0d47a1" title="Custom color">
+            </div>
+        </div>
+
+        <div class="opt-group" id="delColorGroup" style="display:none">
+            <span class="opt-label">Deleted</span>
+            <div class="color-presets" data-target="del">
+                <button class="color-swatch active" data-color="#e74c3c" style="background:#e74c3c" title="Red"></button>
+                <button class="color-swatch" data-color="#e84393" style="background:#e84393" title="Pink"></button>
+                <button class="color-swatch" data-color="#d35400" style="background:#d35400" title="Burnt Orange"></button>
+                <button class="color-swatch" data-color="#636e72" style="background:#636e72" title="Gray"></button>
+                <button class="color-swatch" data-color="#c0392b" style="background:#c0392b" title="Dark Red"></button>
+                <input type="color" id="delColor" value="#e74c3c" title="Custom color">
+            </div>
+        </div>
+
+        <div class="opt-group" id="commonColorGroup">
+            <span class="opt-label">Colour</span>
+            <div class="color-presets" data-target="common">
+                <button class="color-swatch active" data-color="#0d47a1" style="background:#0d47a1" title="Blue"></button>
+                <button class="color-swatch" data-color="#e74c3c" style="background:#e74c3c" title="Red"></button>
+                <button class="color-swatch" data-color="#2ecc40" style="background:#2ecc40" title="Green"></button>
+                <button class="color-swatch" data-color="#9b59b6" style="background:#9b59b6" title="Purple"></button>
+                <button class="color-swatch" data-color="#f39c12" style="background:#f39c12" title="Orange"></button>
+                <input type="color" id="commonColor" value="#0d47a1" title="Custom color">
             </div>
         </div>
     </div>
@@ -552,7 +555,7 @@
         let viewMode = 'inline';
         let ignoreCase = false;
         let ignorePunct = false;
-        let useCommonColor = false;
+        let useCommonColor = true;
         let commonColorValue = '#0d47a1';
         let changeEls = [];
         let changeIdx = -1;
@@ -1093,8 +1096,7 @@
             themeBtn.textContent = theme === 'dark' ? 'Light Mode' : 'Dark Mode';
         }
 
-        const savedTheme = localStorage.getItem('diffTheme')
-            || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        const savedTheme = localStorage.getItem('diffTheme') || 'light';
         setTheme(savedTheme);
 
         themeBtn.addEventListener('click', () => {
@@ -1150,12 +1152,13 @@
         document.querySelectorAll('.color-presets[data-target="common"] .color-swatch').forEach(s =>
             s.classList.toggle('active', s.dataset.color === commonColorValue));
 
-        if (localStorage.getItem('diffUseCommonColor') === 'true') {
-            useCommonColor = true;
-            commonColorBtn.classList.add('active');
-            addColorGroup.style.display = 'none';
-            delColorGroup.style.display = 'none';
-            commonColorGroup.style.display = '';
+        if (localStorage.getItem('diffUseCommonColor') === 'false') {
+            useCommonColor = false;
+            commonColorBtn.classList.remove('active');
+            addColorGroup.style.display = '';
+            delColorGroup.style.display = '';
+            commonColorGroup.style.display = 'none';
+        } else {
             applyColors(commonColorValue, commonColorValue);
         }
 
