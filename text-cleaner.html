@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Cleaner</title>
+    <style>
+        :root {
+            --bg: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --text: #1a1a1a;
+            --text-secondary: #666666;
+            --border: #e0e0e0;
+            --header-bg: #f8f9fa;
+            --textarea-bg: #ffffff;
+            --btn-bg: #e8e8e8;
+            --btn-hover: #d8d8d8;
+            --panel-header-bg: #f0f0f0;
+            --font-size: 14px;
+            --accent: #0d47a1;
+        }
+
+        [data-theme="dark"] {
+            --bg: #1e1e2e;
+            --bg-secondary: #181825;
+            --text: #cdd6f4;
+            --text-secondary: #a6adc8;
+            --border: #45475a;
+            --header-bg: #181825;
+            --textarea-bg: #1e1e2e;
+            --btn-bg: #45475a;
+            --btn-hover: #585b70;
+            --panel-header-bg: #181825;
+            --accent: #89b4fa;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            background: var(--header-bg);
+            border-bottom: 1px solid var(--border);
+            padding: 8px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+            gap: 10px;
+        }
+        .header h1 { font-size: 15px; font-weight: 700; }
+        .header-actions { display: flex; align-items: center; gap: 8px; }
+
+        .options-bar {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 6px 16px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex-shrink: 0;
+            flex-wrap: wrap;
+        }
+        .opt-group {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .opt-group + .opt-group {
+            padding-left: 14px;
+            border-left: 1px solid var(--border);
+        }
+        .opt-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .btn {
+            padding: 4px 10px;
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            background: var(--btn-bg);
+            color: var(--text);
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 500;
+            transition: background 0.15s;
+            white-space: nowrap;
+        }
+        .btn:hover { background: var(--btn-hover); }
+
+        .sm-btn {
+            padding: 2px 7px;
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 10px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .sm-btn:hover { background: var(--btn-bg); }
+
+        .toggle-btn {
+            padding: 3px 9px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 500;
+            transition: all 0.15s;
+        }
+        .toggle-btn:hover { background: var(--btn-bg); }
+        .toggle-btn.active {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent);
+        }
+
+        .seg-control {
+            display: flex;
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        .seg-btn {
+            padding: 3px 10px;
+            border: none;
+            border-right: 1px solid var(--border);
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 500;
+            transition: all 0.15s;
+        }
+        .seg-btn:last-child { border-right: none; }
+        .seg-btn.active {
+            background: var(--btn-bg);
+            color: var(--text);
+            font-weight: 600;
+        }
+        .seg-btn:hover:not(.active) { background: var(--btn-hover); }
+
+        .font-control { display: flex; align-items: center; gap: 5px; }
+        .font-control label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+        .font-control input[type="range"] {
+            width: 60px;
+            height: 4px;
+            cursor: pointer;
+        }
+
+        .panels {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+        }
+        .panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--border);
+            min-width: 0;
+        }
+        .panel:last-child { border-right: none; }
+
+        .panel-header {
+            padding: 6px 12px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            background: var(--panel-header-bg);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+        .panel-actions { display: flex; gap: 5px; align-items: center; }
+
+        .panel textarea {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            resize: none;
+            font-family: inherit;
+            font-size: var(--font-size);
+            line-height: 1.7;
+            background: var(--textarea-bg);
+            color: var(--text);
+            outline: none;
+            transition: background 0.2s, outline 0.2s;
+        }
+        .panel textarea::placeholder { color: var(--text-secondary); opacity: 0.5; }
+        .panel textarea.drag-over {
+            background: #0d47a111;
+            outline: 2px dashed var(--accent);
+            outline-offset: -4px;
+        }
+
+        .stats {
+            padding: 4px 12px;
+            font-size: 11px;
+            color: var(--text-secondary);
+            background: var(--panel-header-bg);
+            border-top: 1px solid var(--border);
+            flex-shrink: 0;
+            display: flex;
+            gap: 16px;
+        }
+        .stats .stat-changed { color: var(--accent); }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(80px);
+            background: var(--text);
+            color: var(--bg);
+            padding: 7px 16px;
+            border-radius: 6px;
+            font-size: 12px;
+            transition: transform 0.3s ease;
+            z-index: 1000;
+            pointer-events: none;
+        }
+        .toast.show { transform: translateX(-50%) translateY(0); }
+
+        .credit {
+            position: fixed;
+            bottom: 4px;
+            right: 12px;
+            font-size: 9px;
+            color: var(--text-secondary);
+            opacity: 0.4;
+            letter-spacing: 0.3px;
+        }
+
+        @media (max-width: 768px) {
+            .panels { flex-direction: column; }
+            .panel {
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+                min-height: 150px;
+            }
+            .options-bar { gap: 8px; }
+            .opt-group + .opt-group { padding-left: 8px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Text Cleaner</h1>
+        <div class="header-actions">
+            <button class="btn" id="clearBtn" title="Clear all">Clear All</button>
+            <button class="btn" id="themeBtn">Dark Mode</button>
+        </div>
+    </div>
+
+    <div class="options-bar">
+        <div class="opt-group">
+            <div class="font-control">
+                <label>Aa</label>
+                <input type="range" id="fontSize" min="10" max="22" value="14" title="Font size">
+            </div>
+        </div>
+
+        <div class="opt-group" style="margin-left:auto">
+            <span class="opt-label">Clean</span>
+            <button class="toggle-btn" id="joinLinesBtn" title="Join broken line wraps (e.g. from PDF copy-paste)">Join Lines</button>
+            <button class="toggle-btn active" id="fixSpacesBtn" title="Fix double spaces, spacing around punctuation">Fix Spaces</button>
+            <button class="toggle-btn active" id="straightQuotesBtn" title="Convert smart quotes, em-dashes, ellipsis to plain ASCII">Straight Quotes</button>
+            <button class="toggle-btn active" id="collapseBlanksBtn" title="Collapse multiple blank lines into one">Collapse Blanks</button>
+            <button class="toggle-btn active" id="trimBtn" title="Remove leading/trailing whitespace per line">Trim</button>
+        </div>
+
+        <div class="opt-group">
+            <span class="opt-label">Case</span>
+            <div class="seg-control" id="caseCtrl">
+                <button class="seg-btn active" data-value="none">As Is</button>
+                <button class="seg-btn" data-value="upper">AA</button>
+                <button class="seg-btn" data-value="lower">aa</button>
+                <button class="seg-btn" data-value="title">Aa Bb</button>
+                <button class="seg-btn" data-value="sentence">Aa bb</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="panels">
+        <div class="panel">
+            <div class="panel-header">
+                <span>Input</span>
+                <div class="panel-actions">
+                    <button class="sm-btn" id="clearInputBtn">Clear</button>
+                </div>
+            </div>
+            <textarea id="input" placeholder="Paste messy text or drop a file here..."></textarea>
+        </div>
+
+        <div class="panel">
+            <div class="panel-header">
+                <span>Cleaned</span>
+                <div class="panel-actions">
+                    <button class="sm-btn" id="copyBtn">Copy</button>
+                </div>
+            </div>
+            <textarea id="output" readonly placeholder="Cleaned text appears here..."></textarea>
+            <div class="stats" id="stats"></div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+    <div class="credit">Exploratory Project by Curious HY</div>
+
+    <script>
+        // ===== DOM =====
+        const inputEl = document.getElementById('input');
+        const outputEl = document.getElementById('output');
+        const statsEl = document.getElementById('stats');
+        const themeBtn = document.getElementById('themeBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const clearInputBtn = document.getElementById('clearInputBtn');
+        const copyBtn = document.getElementById('copyBtn');
+        const fontSlider = document.getElementById('fontSize');
+        const toastEl = document.getElementById('toast');
+
+        const joinLinesBtn = document.getElementById('joinLinesBtn');
+        const fixSpacesBtn = document.getElementById('fixSpacesBtn');
+        const straightQuotesBtn = document.getElementById('straightQuotesBtn');
+        const collapseBlanksBtn = document.getElementById('collapseBlanksBtn');
+        const trimBtn = document.getElementById('trimBtn');
+
+        // ===== STATE =====
+        let opts = {
+            joinLines: false,
+            fixSpaces: true,
+            straightQuotes: true,
+            collapseBlanks: true,
+            trim: true
+        };
+        let caseMode = 'none';
+
+        // ===== UTILITIES =====
+
+        function debounce(fn, ms) {
+            let t;
+            return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
+        }
+
+        function showToast(msg) {
+            toastEl.textContent = msg;
+            toastEl.classList.add('show');
+            setTimeout(() => toastEl.classList.remove('show'), 2000);
+        }
+
+        // ===== CLEANING FUNCTIONS =====
+
+        function joinBrokenLines(text) {
+            const paragraphs = text.split(/\n\s*\n/);
+
+            return paragraphs.map(para => {
+                const lines = para.split('\n').map(l => l.trim()).filter(l => l);
+                if (lines.length <= 1) return lines.join('');
+
+                let result = lines[0];
+                for (let i = 1; i < lines.length; i++) {
+                    const curr = lines[i];
+                    // Keep as separate line if it looks like a list item
+                    if (/^[\u2022\u2023\u25E6\u2043•\-\*]\s|^\d+[\.\)]\s|^[a-z]\)\s|^[A-Z]\)\s/.test(curr)) {
+                        result += '\n' + curr;
+                    } else {
+                        result += ' ' + curr;
+                    }
+                }
+                return result;
+            }).join('\n\n');
+        }
+
+        function fixSpaces(text) {
+            return text
+                .replace(/ {2,}/g, ' ')
+                .replace(/ ([.,;:!?])/g, '$1')
+                .replace(/([.,;:!?])([A-Za-z])/g, '$1 $2')
+                .replace(/\( /g, '(')
+                .replace(/ \)/g, ')');
+        }
+
+        function straightQuotes(text) {
+            return text
+                .replace(/[\u2018\u2019\u201A\u2032]/g, "'")
+                .replace(/[\u201C\u201D\u201E\u2033]/g, '"')
+                .replace(/[\u2013\u2014]/g, '-')
+                .replace(/\u2026/g, '...')
+                .replace(/\u00A0/g, ' ');
+        }
+
+        function collapseBlanks(text) {
+            return text.replace(/\n{3,}/g, '\n\n');
+        }
+
+        function trimLines(text) {
+            return text.split('\n').map(l => l.trim()).join('\n').trim();
+        }
+
+        function applyCase(text, mode) {
+            if (mode === 'upper') return text.toUpperCase();
+            if (mode === 'lower') return text.toLowerCase();
+            if (mode === 'title') {
+                return text.replace(/\b\w+/g, w =>
+                    w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
+                );
+            }
+            if (mode === 'sentence') {
+                const lower = text.toLowerCase();
+                return lower.replace(/(^\s*|[.!?]\s+)(\w)/g, (m, pre, ch) =>
+                    pre + ch.toUpperCase()
+                );
+            }
+            return text;
+        }
+
+        // ===== MAIN =====
+
+        function clean() {
+            let text = inputEl.value;
+            if (!text.trim()) {
+                outputEl.value = '';
+                statsEl.innerHTML = '';
+                return;
+            }
+
+            // Always normalize line endings
+            text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+            // Apply toggleable operations in order
+            if (opts.straightQuotes) text = straightQuotes(text);
+            if (opts.trim) text = trimLines(text);
+            if (opts.joinLines) text = joinBrokenLines(text);
+            if (opts.fixSpaces) text = fixSpaces(text);
+            if (opts.collapseBlanks) text = collapseBlanks(text);
+            if (opts.trim) text = trimLines(text); // trim again after other ops
+
+            // Case conversion
+            text = applyCase(text, caseMode);
+
+            outputEl.value = text;
+            updateStats(inputEl.value, text);
+        }
+
+        const debouncedClean = debounce(clean, 200);
+
+        function updateStats(input, output) {
+            const inWords = input.trim() ? input.trim().split(/\s+/).length : 0;
+            const outWords = output.trim() ? output.trim().split(/\s+/).length : 0;
+            const outChars = output.length;
+            const outParas = output.trim() ? output.trim().split(/\n\s*\n/).length : 0;
+            const charDiff = input.length - output.length;
+
+            let html = '<span>' + outWords + ' words</span>' +
+                '<span>' + outChars + ' chars</span>' +
+                '<span>' + outParas + ' paragraph' + (outParas !== 1 ? 's' : '') + '</span>';
+
+            if (charDiff > 0) {
+                html += '<span class="stat-changed">' + charDiff + ' chars removed</span>';
+            } else if (charDiff < 0) {
+                html += '<span class="stat-changed">' + Math.abs(charDiff) + ' chars added</span>';
+            }
+
+            statsEl.innerHTML = html;
+        }
+
+        // ===== EVENTS =====
+
+        inputEl.addEventListener('input', debouncedClean);
+
+        clearBtn.addEventListener('click', () => {
+            inputEl.value = '';
+            outputEl.value = '';
+            statsEl.innerHTML = '';
+        });
+
+        clearInputBtn.addEventListener('click', () => {
+            inputEl.value = '';
+            outputEl.value = '';
+            statsEl.innerHTML = '';
+        });
+
+        copyBtn.addEventListener('click', () => {
+            if (!outputEl.value) return;
+            navigator.clipboard.writeText(outputEl.value)
+                .then(() => showToast('Copied to clipboard'));
+        });
+
+        // Toggle buttons
+        function bindToggle(btn, key) {
+            btn.addEventListener('click', () => {
+                opts[key] = !opts[key];
+                btn.classList.toggle('active', opts[key]);
+                localStorage.setItem('cleaner_' + key, opts[key]);
+                clean();
+            });
+        }
+
+        bindToggle(joinLinesBtn, 'joinLines');
+        bindToggle(fixSpacesBtn, 'fixSpaces');
+        bindToggle(straightQuotesBtn, 'straightQuotes');
+        bindToggle(collapseBlanksBtn, 'collapseBlanks');
+        bindToggle(trimBtn, 'trim');
+
+        // Case control
+        document.getElementById('caseCtrl').addEventListener('click', (e) => {
+            const btn = e.target.closest('.seg-btn');
+            if (!btn || btn.classList.contains('active')) return;
+            document.querySelectorAll('#caseCtrl .seg-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            caseMode = btn.dataset.value;
+            localStorage.setItem('cleaner_caseMode', caseMode);
+            clean();
+        });
+
+        // Font size
+        fontSlider.addEventListener('input', () => {
+            document.documentElement.style.setProperty('--font-size', fontSlider.value + 'px');
+            localStorage.setItem('cleaner_fontSize', fontSlider.value);
+        });
+
+        // Drag & drop
+        inputEl.addEventListener('dragover', (e) => { e.preventDefault(); inputEl.classList.add('drag-over'); });
+        inputEl.addEventListener('dragleave', () => inputEl.classList.remove('drag-over'));
+        inputEl.addEventListener('drop', (e) => {
+            e.preventDefault();
+            inputEl.classList.remove('drag-over');
+            const file = e.dataTransfer.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = () => { inputEl.value = reader.result; clean(); };
+                reader.readAsText(file);
+            }
+        });
+
+        // Theme
+        function setTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            themeBtn.textContent = theme === 'dark' ? 'Light Mode' : 'Dark Mode';
+        }
+
+        const savedTheme = localStorage.getItem('cleaner_theme') || 'light';
+        setTheme(savedTheme);
+
+        themeBtn.addEventListener('click', () => {
+            const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            setTheme(next);
+            localStorage.setItem('cleaner_theme', next);
+        });
+
+        // ===== INIT =====
+
+        // Restore saved toggle states
+        ['joinLines', 'fixSpaces', 'straightQuotes', 'collapseBlanks', 'trim'].forEach(key => {
+            const saved = localStorage.getItem('cleaner_' + key);
+            if (saved !== null) {
+                opts[key] = saved === 'true';
+                const btnMap = {
+                    joinLines: joinLinesBtn,
+                    fixSpaces: fixSpacesBtn,
+                    straightQuotes: straightQuotesBtn,
+                    collapseBlanks: collapseBlanksBtn,
+                    trim: trimBtn
+                };
+                btnMap[key].classList.toggle('active', opts[key]);
+            }
+        });
+
+        const savedCase = localStorage.getItem('cleaner_caseMode');
+        if (savedCase) {
+            caseMode = savedCase;
+            document.querySelectorAll('#caseCtrl .seg-btn').forEach(b =>
+                b.classList.toggle('active', b.dataset.value === caseMode));
+        }
+
+        const savedFont = localStorage.getItem('cleaner_fontSize');
+        if (savedFont) {
+            fontSlider.value = savedFont;
+            document.documentElement.style.setProperty('--font-size', savedFont + 'px');
+        }
+    </script>
+</body>
+</html>

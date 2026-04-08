@@ -7,6 +7,7 @@ A collection of standalone, single-file HTML tools. Each file is fully self-cont
 | Tool | Description |
 |------|-------------|
 | [text-compare.html](text-compare.html) | Side-by-side text comparison with word-level and character-level diff, inline/side-by-side views, and Outlook-compatible rich copy |
+| [text-cleaner.html](text-cleaner.html) | Fix messy text from PDFs, websites, and emails — join broken lines, fix spacing, normalize quotes, case conversion |
 
 ## Features
 
