@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Compare</title>
+    <style>
+        :root {
+            --bg: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --text: #1a1a1a;
+            --text-secondary: #666666;
+            --border: #e0e0e0;
+            --add-color: #3498db;
+            --del-color: #e74c3c;
+            --header-bg: #f8f9fa;
+            --textarea-bg: #ffffff;
+            --btn-bg: #e8e8e8;
+            --btn-hover: #d8d8d8;
+            --panel-header-bg: #f0f0f0;
+            --font-size: 14px;
+            --accent: #3498db;
+        }
+
+        [data-theme="dark"] {
+            --bg: #1e1e2e;
+            --bg-secondary: #181825;
+            --text: #cdd6f4;
+            --text-secondary: #a6adc8;
+            --border: #45475a;
+            --header-bg: #181825;
+            --textarea-bg: #1e1e2e;
+            --btn-bg: #45475a;
+            --btn-hover: #585b70;
+            --panel-header-bg: #181825;
+            --accent: #89b4fa;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* ===== HEADER ===== */
+        .header {
+            background: var(--header-bg);
+            border-bottom: 1px solid var(--border);
+            padding: 8px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+            gap: 10px;
+        }
+        .header h1 { font-size: 15px; font-weight: 700; }
+        .header-actions { display: flex; align-items: center; gap: 8px; }
+
+        /* ===== OPTIONS BAR ===== */
+        .options-bar {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 6px 16px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex-shrink: 0;
+            flex-wrap: wrap;
+        }
+        .opt-group {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .opt-group + .opt-group {
+            padding-left: 14px;
+            border-left: 1px solid var(--border);
+        }
+        .opt-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        /* ===== BUTTONS ===== */
+        .btn {
+            padding: 4px 10px;
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            background: var(--btn-bg);
+            color: var(--text);
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 500;
+            transition: background 0.15s;
+            white-space: nowrap;
+        }
+        .btn:hover { background: var(--btn-hover); }
+
+        .sm-btn {
+            padding: 2px 7px;
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 10px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .sm-btn:hover { background: var(--btn-bg); }
+
+        .toggle-btn {
+            padding: 3px 9px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 500;
+            transition: all 0.15s;
+        }
+        .toggle-btn:hover { background: var(--btn-bg); }
+        .toggle-btn.active {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent);
+        }
+
+        .seg-control {
+            display: flex;
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        .seg-btn {
+            padding: 3px 10px;
+            border: none;
+            border-right: 1px solid var(--border);
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 500;
+            transition: all 0.15s;
+        }
+        .seg-btn:last-child { border-right: none; }
+        .seg-btn.active {
+            background: var(--btn-bg);
+            color: var(--text);
+            font-weight: 600;
+        }
+        .seg-btn:hover:not(.active) { background: var(--btn-hover); }
+
+        /* ===== COLOR PRESETS ===== */
+        .color-presets { display: flex; align-items: center; gap: 3px; }
+
+        .color-swatch {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            cursor: pointer;
+            padding: 0;
+            outline: none;
+            transition: border-color 0.15s, transform 0.1s;
+        }
+        .color-swatch:hover { transform: scale(1.2); border-color: var(--text-secondary); }
+        .color-swatch.active { border-color: var(--text); }
+
+        .color-presets input[type="color"] {
+            width: 16px;
+            height: 16px;
+            border: 1px solid var(--border);
+            border-radius: 50%;
+            cursor: pointer;
+            padding: 0;
+            background: transparent;
+        }
+
+        /* ===== FONT SLIDER ===== */
+        .font-control { display: flex; align-items: center; gap: 5px; }
+        .font-control label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+        .font-control input[type="range"] {
+            width: 60px;
+            height: 4px;
+            cursor: pointer;
+        }
+
+        /* ===== PANELS ===== */
+        .panels {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+        }
+        .panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--border);
+            min-width: 0;
+        }
+        .panel:last-child { border-right: none; }
+
+        .panel-header {
+            padding: 6px 12px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            background: var(--panel-header-bg);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+        .panel-actions { display: flex; gap: 5px; align-items: center; }
+
+        .panel textarea {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            resize: none;
+            font-family: inherit;
+            font-size: var(--font-size);
+            line-height: 1.7;
+            background: var(--textarea-bg);
+            color: var(--text);
+            outline: none;
+            transition: background 0.2s, outline 0.2s;
+        }
+        .panel textarea::placeholder { color: var(--text-secondary); opacity: 0.5; }
+        .panel textarea.drag-over {
+            background: #3498db11;
+            outline: 2px dashed var(--add-color);
+            outline-offset: -4px;
+        }
+
+        /* ===== DIFF OUTPUT ===== */
+        .diff-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+        .diff-output {
+            flex: 1;
+            padding: 12px;
+            overflow-y: auto;
+            font-size: var(--font-size);
+            line-height: 1.7;
+            background: var(--textarea-bg);
+            word-wrap: break-word;
+        }
+        .diff-output.hidden { display: none; }
+
+        .diff-output .added,
+        .diff-side-content .added {
+            color: var(--add-color);
+            font-weight: 600;
+        }
+        .diff-output .deleted,
+        .diff-side-content .deleted {
+            color: var(--del-color);
+            text-decoration: line-through;
+            padding: 1px 3px;
+            border-radius: 3px;
+        }
+        .char-change {
+            font-weight: 800;
+            text-decoration-style: double;
+        }
+
+        .empty-state {
+            color: var(--text-secondary);
+            opacity: 0.4;
+            font-style: italic;
+            font-size: 13px;
+        }
+
+        /* Side-by-side */
+        .diff-sbs {
+            flex: 1;
+            display: none;
+            min-height: 0;
+        }
+        .diff-sbs.active { display: flex; }
+
+        .diff-side {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+        .diff-side:first-child { border-right: 1px solid var(--border); }
+
+        .diff-side-label {
+            padding: 3px 12px;
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            background: var(--panel-header-bg);
+            border-bottom: 1px solid var(--border);
+        }
+        .diff-side-content {
+            flex: 1;
+            padding: 12px;
+            overflow-y: auto;
+            font-size: var(--font-size);
+            line-height: 1.7;
+            word-wrap: break-word;
+        }
+
+        /* Navigation */
+        .nav-current {
+            outline: 2px solid var(--accent);
+            outline-offset: 1px;
+            border-radius: 3px;
+        }
+        .nav-info {
+            font-size: 10px;
+            color: var(--text-secondary);
+            min-width: 32px;
+            text-align: center;
+        }
+
+        /* Stats */
+        .stats {
+            padding: 4px 12px;
+            font-size: 11px;
+            color: var(--text-secondary);
+            background: var(--panel-header-bg);
+            border-top: 1px solid var(--border);
+            flex-shrink: 0;
+            display: flex;
+            gap: 12px;
+        }
+        .stats .stat-added { color: var(--add-color); }
+        .stats .stat-deleted { color: var(--del-color); }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(80px);
+            background: var(--text);
+            color: var(--bg);
+            padding: 7px 16px;
+            border-radius: 6px;
+            font-size: 12px;
+            transition: transform 0.3s ease;
+            z-index: 1000;
+            pointer-events: none;
+        }
+        .toast.show { transform: translateX(-50%) translateY(0); }
+
+        .credit {
+            position: fixed;
+            bottom: 4px;
+            right: 12px;
+            font-size: 9px;
+            color: var(--text-secondary);
+            opacity: 0.4;
+            letter-spacing: 0.3px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .panels { flex-direction: column; }
+            .panel {
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+                min-height: 150px;
+            }
+            .options-bar { gap: 8px; }
+            .opt-group + .opt-group { padding-left: 8px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Text Compare</h1>
+        <div class="header-actions">
+            <button class="btn" id="swapBtn" title="Swap texts (Ctrl+Shift+S)">Swap</button>
+            <button class="btn" id="clearBtn" title="Clear all (Ctrl+Shift+K)">Clear All</button>
+            <button class="btn" id="themeBtn">Dark Mode</button>
+        </div>
+    </div>
+
+    <div class="options-bar">
+        <div class="opt-group" id="addColorGroup">
+            <span class="opt-label">Added</span>
+            <div class="color-presets" data-target="add">
+                <button class="color-swatch active" data-color="#3498db" style="background:#3498db" title="Blue"></button>
+                <button class="color-swatch" data-color="#2ecc40" style="background:#2ecc40" title="Green"></button>
+                <button class="color-swatch" data-color="#1abc9c" style="background:#1abc9c" title="Teal"></button>
+                <button class="color-swatch" data-color="#9b59b6" style="background:#9b59b6" title="Purple"></button>
+                <button class="color-swatch" data-color="#f39c12" style="background:#f39c12" title="Orange"></button>
+                <input type="color" id="addColor" value="#3498db" title="Custom color">
+            </div>
+        </div>
+
+        <div class="opt-group" id="delColorGroup">
+            <span class="opt-label">Deleted</span>
+            <div class="color-presets" data-target="del">
+                <button class="color-swatch active" data-color="#e74c3c" style="background:#e74c3c" title="Red"></button>
+                <button class="color-swatch" data-color="#e84393" style="background:#e84393" title="Pink"></button>
+                <button class="color-swatch" data-color="#d35400" style="background:#d35400" title="Burnt Orange"></button>
+                <button class="color-swatch" data-color="#636e72" style="background:#636e72" title="Gray"></button>
+                <button class="color-swatch" data-color="#c0392b" style="background:#c0392b" title="Dark Red"></button>
+                <input type="color" id="delColor" value="#e74c3c" title="Custom color">
+            </div>
+        </div>
+
+        <div class="opt-group" id="commonColorGroup" style="display:none">
+            <span class="opt-label">Color</span>
+            <div class="color-presets" data-target="common">
+                <button class="color-swatch active" data-color="#3498db" style="background:#3498db" title="Blue"></button>
+                <button class="color-swatch" data-color="#e74c3c" style="background:#e74c3c" title="Red"></button>
+                <button class="color-swatch" data-color="#2ecc40" style="background:#2ecc40" title="Green"></button>
+                <button class="color-swatch" data-color="#9b59b6" style="background:#9b59b6" title="Purple"></button>
+                <button class="color-swatch" data-color="#f39c12" style="background:#f39c12" title="Orange"></button>
+                <input type="color" id="commonColor" value="#3498db" title="Custom color">
+            </div>
+        </div>
+
+        <div class="opt-group">
+            <button class="toggle-btn" id="commonColorBtn" title="Use same color for both">Common</button>
+            <button class="toggle-btn" id="ignoreCaseBtn" title="Ignore case differences">Aa</button>
+            <button class="toggle-btn" id="ignorePunctBtn" title="Ignore punctuation differences">.,!</button>
+        </div>
+
+        <div class="opt-group">
+            <div class="seg-control" id="diffModeCtrl">
+                <button class="seg-btn active" data-value="word">Word</button>
+                <button class="seg-btn" data-value="sentence">Sentence</button>
+            </div>
+            <div class="seg-control" id="viewModeCtrl">
+                <button class="seg-btn active" data-value="inline">Inline</button>
+                <button class="seg-btn" data-value="sidebyside">Side by Side</button>
+            </div>
+        </div>
+
+        <div class="opt-group">
+            <div class="font-control">
+                <label>Aa</label>
+                <input type="range" id="fontSize" min="10" max="22" value="14" title="Font size">
+            </div>
+        </div>
+    </div>
+
+    <div class="panels">
+        <div class="panel">
+            <div class="panel-header">
+                <span>Original</span>
+                <div class="panel-actions">
+                    <button class="sm-btn" data-clear="original">Clear</button>
+                </div>
+            </div>
+            <textarea id="original" placeholder="Paste original text or drop a file here..."></textarea>
+        </div>
+
+        <div class="panel">
+            <div class="panel-header">
+                <span>New</span>
+                <div class="panel-actions">
+                    <button class="sm-btn" data-clear="modified">Clear</button>
+                </div>
+            </div>
+            <textarea id="modified" placeholder="Paste new text or drop a file here..."></textarea>
+        </div>
+
+        <div class="panel">
+            <div class="panel-header">
+                <span>Differences</span>
+                <div class="panel-actions">
+                    <button class="sm-btn" id="prevBtn" title="Previous change">Prev</button>
+                    <span class="nav-info" id="navInfo"></span>
+                    <button class="sm-btn" id="nextBtn" title="Next change">Next</button>
+                    <button class="sm-btn" id="copyBtn" title="Copy with formatting for Outlook">Copy</button>
+                </div>
+            </div>
+            <div class="diff-container">
+                <div class="diff-output" id="diffOutput">
+                    <span class="empty-state">Paste text in both panels to see differences</span>
+                </div>
+                <div class="diff-sbs" id="diffSbs">
+                    <div class="diff-side">
+                        <div class="diff-side-label">Original</div>
+                        <div class="diff-side-content" id="diffLeft"></div>
+                    </div>
+                    <div class="diff-side">
+                        <div class="diff-side-label">New</div>
+                        <div class="diff-side-content" id="diffRight"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="stats" id="stats"></div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+    <div class="credit">Exploratory Project by Curious HY</div>
+
+    <script>
+        // ===== DOM REFS =====
+        const originalEl = document.getElementById('original');
+        const modifiedEl = document.getElementById('modified');
+        const diffOutput = document.getElementById('diffOutput');
+        const diffSbs = document.getElementById('diffSbs');
+        const diffLeft = document.getElementById('diffLeft');
+        const diffRight = document.getElementById('diffRight');
+        const statsEl = document.getElementById('stats');
+        const themeBtn = document.getElementById('themeBtn');
+        const addColorInput = document.getElementById('addColor');
+        const delColorInput = document.getElementById('delColor');
+        const swapBtn = document.getElementById('swapBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const copyBtn = document.getElementById('copyBtn');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const navInfo = document.getElementById('navInfo');
+        const ignoreCaseBtn = document.getElementById('ignoreCaseBtn');
+        const ignorePunctBtn = document.getElementById('ignorePunctBtn');
+        const commonColorBtn = document.getElementById('commonColorBtn');
+        const commonColorInput = document.getElementById('commonColor');
+        const addColorGroup = document.getElementById('addColorGroup');
+        const delColorGroup = document.getElementById('delColorGroup');
+        const commonColorGroup = document.getElementById('commonColorGroup');
+        const fontSlider = document.getElementById('fontSize');
+        const toastEl = document.getElementById('toast');
+
+        // ===== STATE =====
+        let lastDiffResult = [];
+        let diffMode = 'word';
+        let viewMode = 'inline';
+        let ignoreCase = false;
+        let ignorePunct = false;
+        let useCommonColor = false;
+        let commonColorValue = '#3498db';
+        let changeEls = [];
+        let changeIdx = -1;
+
+        // ===== UTILITIES =====
+
+        function debounce(fn, ms) {
+            let t;
+            return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
+        }
+
+        function escapeHtml(s) {
+            return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function showToast(msg) {
+            toastEl.textContent = msg;
+            toastEl.classList.add('show');
+            setTimeout(() => toastEl.classList.remove('show'), 2000);
+        }
+
+        function hexToRgb(hex) {
+            return {
+                r: parseInt(hex.slice(1, 3), 16),
+                g: parseInt(hex.slice(3, 5), 16),
+                b: parseInt(hex.slice(5, 7), 16)
+            };
+        }
+
+        function lightTint(hex, amount) {
+            const { r, g, b } = hexToRgb(hex);
+            const mix = (c) => Math.round(c + (255 - c) * (1 - amount));
+            return '#' + [mix(r), mix(g), mix(b)].map(v => v.toString(16).padStart(2, '0')).join('');
+        }
+
+        // ===== TEXT PROCESSING =====
+
+        function normalize(text) {
+            return text
+                .replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+                .replace(/\t/g, ' ')
+                .replace(/[^\S\n]+/g, ' ')
+                .replace(/\n{3,}/g, '\n\n')
+                .split('\n').map(l => l.trim()).join('\n')
+                .trim();
+        }
+
+        function tokenizeWords(text) {
+            if (!text) return [];
+            const tokens = [];
+            const paras = text.split('\n\n');
+            for (let p = 0; p < paras.length; p++) {
+                if (p > 0) tokens.push('\n\n');
+                const lines = paras[p].split('\n');
+                for (let l = 0; l < lines.length; l++) {
+                    if (l > 0) tokens.push('\n');
+                    tokens.push(...lines[l].split(' ').filter(w => w));
+                }
+            }
+            return tokens;
+        }
+
+        function tokenizeSentences(text) {
+            if (!text) return [];
+            const tokens = [];
+            const paras = text.split('\n\n');
+            for (let p = 0; p < paras.length; p++) {
+                if (p > 0) tokens.push('\n\n');
+                const para = paras[p].trim();
+                if (!para) continue;
+                const parts = para.match(/[^.!?]*[.!?]+(?:\s+|$)/g);
+                if (parts) {
+                    for (const s of parts) { const t = s.trim(); if (t) tokens.push(t); }
+                    const rem = para.slice(parts.join('').length).trim();
+                    if (rem) tokens.push(rem);
+                } else {
+                    tokens.push(para);
+                }
+            }
+            return tokens;
+        }
+
+        function makeCmpToken(token) {
+            if (token === '\n' || token === '\n\n') return token;
+            let c = token;
+            if (ignoreCase) c = c.toLowerCase();
+            if (ignorePunct) c = c.replace(/[^\w\s]/g, '');
+            return c;
+        }
+
+        // ===== DIFF ALGORITHM =====
+
+        function computeDiff(oldCmp, newCmp, oldDisp, newDisp) {
+            if (!oldDisp) oldDisp = oldCmp;
+            if (!newDisp) newDisp = newCmp;
+
+            let pre = 0;
+            while (pre < oldCmp.length && pre < newCmp.length && oldCmp[pre] === newCmp[pre]) pre++;
+
+            let suf = 0;
+            while (suf < oldCmp.length - pre && suf < newCmp.length - pre
+                && oldCmp[oldCmp.length - 1 - suf] === newCmp[newCmp.length - 1 - suf]) suf++;
+
+            const prefix = oldDisp.slice(0, pre).map(v => ({ type: 'same', value: v }));
+            const suffix = suf > 0 ? oldDisp.slice(oldDisp.length - suf).map(v => ({ type: 'same', value: v })) : [];
+
+            const aCmp = oldCmp.slice(pre, oldCmp.length - suf);
+            const bCmp = newCmp.slice(pre, newCmp.length - suf);
+            const aDisp = oldDisp.slice(pre, oldDisp.length - suf);
+            const bDisp = newDisp.slice(pre, newDisp.length - suf);
+
+            if (!aCmp.length && !bCmp.length) return prefix.concat(suffix);
+            if (!aCmp.length) return prefix.concat(bDisp.map(v => ({ type: 'added', value: v }))).concat(suffix);
+            if (!bCmp.length) return prefix.concat(aDisp.map(v => ({ type: 'deleted', value: v }))).concat(suffix);
+
+            if (aCmp.length * bCmp.length > 10_000_000) {
+                return prefix
+                    .concat(aDisp.map(v => ({ type: 'deleted', value: v })))
+                    .concat(bDisp.map(v => ({ type: 'added', value: v })))
+                    .concat(suffix);
+            }
+
+            const m = aCmp.length, n = bCmp.length;
+            const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+            for (let i = 1; i <= m; i++)
+                for (let j = 1; j <= n; j++)
+                    dp[i][j] = aCmp[i - 1] === bCmp[j - 1] ? dp[i - 1][j - 1] + 1 : Math.max(dp[i - 1][j], dp[i][j - 1]);
+
+            const mid = [];
+            let i = m, j = n;
+            while (i > 0 || j > 0) {
+                if (i > 0 && j > 0 && aCmp[i - 1] === bCmp[j - 1]) {
+                    mid.unshift({ type: 'same', value: aDisp[--i] }); j--;
+                } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+                    mid.unshift({ type: 'added', value: bDisp[--j] });
+                } else {
+                    mid.unshift({ type: 'deleted', value: aDisp[--i] });
+                }
+            }
+            return prefix.concat(mid).concat(suffix);
+        }
+
+        function charDiff(a, b) {
+            const m = a.length, n = b.length;
+            const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+            for (let i = 1; i <= m; i++)
+                for (let j = 1; j <= n; j++)
+                    dp[i][j] = a[i - 1] === b[j - 1] ? dp[i - 1][j - 1] + 1 : Math.max(dp[i - 1][j], dp[i][j - 1]);
+
+            const res = [];
+            let i = m, j = n;
+            while (i > 0 || j > 0) {
+                if (i > 0 && j > 0 && a[i - 1] === b[j - 1]) {
+                    res.unshift({ type: 'same', ch: a[--i] }); j--;
+                } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+                    res.unshift({ type: 'added', ch: b[--j] });
+                } else {
+                    res.unshift({ type: 'deleted', ch: a[--i] });
+                }
+            }
+            return res;
+        }
+
+        // ===== RENDERING =====
+
+        function renderCharPair(oldW, newW) {
+            const d = charDiff(oldW, newW);
+            let dh = '', ah = '';
+            for (const c of d) {
+                const ch = escapeHtml(c.ch);
+                if (c.type === 'same') { dh += ch; ah += ch; }
+                else if (c.type === 'deleted') dh += '<span class="char-change">' + ch + '</span>';
+                else ah += '<span class="char-change">' + ch + '</span>';
+            }
+            return '<span class="deleted">' + dh + '</span> <span class="added">' + ah + '</span> ';
+        }
+
+        function renderChangeGroup(dels, adds) {
+            let html = '';
+            const pairs = Math.min(dels.length, adds.length);
+            for (let p = 0; p < pairs; p++) html += renderCharPair(dels[p], adds[p]);
+            for (let p = pairs; p < dels.length; p++) html += '<span class="deleted">' + escapeHtml(dels[p]) + '</span> ';
+            for (let p = pairs; p < adds.length; p++) html += '<span class="added">' + escapeHtml(adds[p]) + '</span> ';
+            return html;
+        }
+
+        // Word-level diff rendered inline (used for sentence sub-diffs)
+        function renderWordSubDiff(oldSent, newSent) {
+            const ow = oldSent.split(/\s+/).filter(w => w);
+            const nw = newSent.split(/\s+/).filter(w => w);
+            const oc = ow.map(makeCmpToken), nc = nw.map(makeCmpToken);
+            const diff = computeDiff(oc, nc, ow, nw);
+
+            let html = '';
+            let k = 0;
+            while (k < diff.length) {
+                if (diff[k].type === 'same') { html += escapeHtml(diff[k].value) + ' '; k++; continue; }
+                const ds = [], as = [];
+                while (k < diff.length && diff[k].type !== 'same') {
+                    if (diff[k].type === 'deleted') ds.push(diff[k].value);
+                    else as.push(diff[k].value);
+                    k++;
+                }
+                html += renderChangeGroup(ds, as);
+            }
+            return html;
+        }
+
+        function renderInline(result) {
+            if (!result.length) return '<span class="empty-state">Paste text in both panels to see differences</span>';
+
+            let html = '';
+            let i = 0;
+
+            while (i < result.length) {
+                if (result[i].value === '\n\n') { html += '<br><br>'; i++; continue; }
+                if (result[i].value === '\n') { html += '<br>'; i++; continue; }
+                if (result[i].type === 'same') { html += escapeHtml(result[i].value) + ' '; i++; continue; }
+
+                // Collect change group
+                const dels = [], adds = [];
+                while (i < result.length && result[i].type !== 'same'
+                    && result[i].value !== '\n' && result[i].value !== '\n\n') {
+                    if (result[i].type === 'deleted') dels.push(result[i].value);
+                    else adds.push(result[i].value);
+                    i++;
+                }
+
+                if (diffMode === 'sentence') {
+                    // Pair changed sentences and show word-level sub-diff within each pair
+                    const pairs = Math.min(dels.length, adds.length);
+                    for (let p = 0; p < pairs; p++) html += renderWordSubDiff(dels[p], adds[p]);
+                    for (let p = pairs; p < dels.length; p++) html += '<span class="deleted">' + escapeHtml(dels[p]) + '</span> ';
+                    for (let p = pairs; p < adds.length; p++) html += '<span class="added">' + escapeHtml(adds[p]) + '</span> ';
+                } else {
+                    // Word mode: char-level sub-diff within paired words
+                    html += renderChangeGroup(dels, adds);
+                }
+            }
+            return html;
+        }
+
+        function renderSideBySide(result) {
+            let lh = '', rh = '';
+
+            for (const item of result) {
+                if (item.value === '\n\n') { lh += '<br><br>'; rh += '<br><br>'; continue; }
+                if (item.value === '\n') { lh += '<br>'; rh += '<br>'; continue; }
+                const t = escapeHtml(item.value);
+                if (item.type === 'same') { lh += t + ' '; rh += t + ' '; }
+                else if (item.type === 'deleted') lh += '<span class="deleted">' + t + '</span> ';
+                else rh += '<span class="added">' + t + '</span> ';
+            }
+
+            return { left: lh, right: rh };
+        }
+
+        // ===== STATS =====
+
+        function updateStats(result) {
+            let added = 0, deleted = 0, unchanged = 0;
+            for (const item of result) {
+                if (item.value === '\n' || item.value === '\n\n') continue;
+                if (item.type === 'added') added++;
+                else if (item.type === 'deleted') deleted++;
+                else unchanged++;
+            }
+            if (!added && !deleted && !unchanged) { statsEl.innerHTML = ''; return; }
+            const unit = diffMode === 'sentence' ? 'sentences' : 'words';
+            if (!added && !deleted) {
+                statsEl.innerHTML = '<span>Texts are identical (' + unchanged + ' ' + unit + ')</span>';
+                return;
+            }
+            statsEl.innerHTML =
+                '<span class="stat-added">+' + added + ' added</span>' +
+                '<span class="stat-deleted">-' + deleted + ' deleted</span>' +
+                '<span>' + unchanged + ' unchanged</span>';
+        }
+
+        // ===== MAIN DIFF RUNNER =====
+
+        function runDiff() {
+            const origText = originalEl.value;
+            const newText = modifiedEl.value;
+            const emptyMsg = '<span class="empty-state">Paste text in both panels to see differences</span>';
+
+            if (!origText.trim() && !newText.trim()) {
+                diffOutput.innerHTML = emptyMsg;
+                diffLeft.innerHTML = ''; diffRight.innerHTML = '';
+                statsEl.innerHTML = '';
+                lastDiffResult = [];
+                updateNav();
+                return;
+            }
+
+            const normOld = normalize(origText);
+            const normNew = normalize(newText);
+            const tokenizer = diffMode === 'sentence' ? tokenizeSentences : tokenizeWords;
+            const oldDisp = tokenizer(normOld);
+            const newDisp = tokenizer(normNew);
+            const oldCmp = oldDisp.map(makeCmpToken);
+            const newCmp = newDisp.map(makeCmpToken);
+
+            if (!origText.trim()) {
+                lastDiffResult = newDisp.map(v => ({ type: 'added', value: v }));
+            } else if (!newText.trim()) {
+                lastDiffResult = oldDisp.map(v => ({ type: 'deleted', value: v }));
+            } else {
+                lastDiffResult = computeDiff(oldCmp, newCmp, oldDisp, newDisp);
+            }
+
+            if (viewMode === 'inline') {
+                diffOutput.innerHTML = renderInline(lastDiffResult);
+                diffOutput.classList.remove('hidden');
+                diffSbs.classList.remove('active');
+            } else {
+                const { left, right } = renderSideBySide(lastDiffResult);
+                diffLeft.innerHTML = left || emptyMsg;
+                diffRight.innerHTML = right || emptyMsg;
+                diffOutput.classList.add('hidden');
+                diffSbs.classList.add('active');
+            }
+
+            updateStats(lastDiffResult);
+            updateNav();
+        }
+
+        const debouncedDiff = debounce(runDiff, 300);
+
+        // ===== CHANGE NAVIGATION =====
+
+        function updateNav() {
+            const container = viewMode === 'inline' ? diffOutput : diffSbs;
+            changeEls = Array.from(container.querySelectorAll('.added, .deleted'));
+            changeIdx = -1;
+            navInfo.textContent = changeEls.length ? '0/' + changeEls.length : '';
+        }
+
+        function navigateChange(dir) {
+            if (!changeEls.length) return;
+            if (changeIdx >= 0 && changeIdx < changeEls.length)
+                changeEls[changeIdx].classList.remove('nav-current');
+
+            changeIdx += dir;
+            if (changeIdx >= changeEls.length) changeIdx = 0;
+            if (changeIdx < 0) changeIdx = changeEls.length - 1;
+
+            const el = changeEls[changeIdx];
+            el.classList.add('nav-current');
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            navInfo.textContent = (changeIdx + 1) + '/' + changeEls.length;
+        }
+
+        prevBtn.addEventListener('click', () => navigateChange(-1));
+        nextBtn.addEventListener('click', () => navigateChange(1));
+
+        // ===== INPUT EVENTS =====
+
+        originalEl.addEventListener('input', debouncedDiff);
+        modifiedEl.addEventListener('input', debouncedDiff);
+
+        document.querySelectorAll('[data-clear]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.getElementById(btn.dataset.clear).value = '';
+                runDiff();
+            });
+        });
+
+        clearBtn.addEventListener('click', () => {
+            originalEl.value = ''; modifiedEl.value = '';
+            runDiff();
+        });
+
+        swapBtn.addEventListener('click', () => {
+            const tmp = originalEl.value;
+            originalEl.value = modifiedEl.value;
+            modifiedEl.value = tmp;
+            runDiff();
+        });
+
+        // ===== COPY WITH RICH FORMATTING =====
+
+        copyBtn.addEventListener('click', () => {
+            if (!lastDiffResult.length) return;
+
+            const addCol = useCommonColor ? commonColorValue : addColorInput.value;
+            const delCol = useCommonColor ? commonColorValue : delColorInput.value;
+
+            let html = '<div style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;font-size:14px;line-height:1.7;">';
+            let plain = '';
+
+            for (const item of lastDiffResult) {
+                if (item.value === '\n\n') { html += '<br><br>'; plain += '\n\n'; continue; }
+                if (item.value === '\n') { html += '<br>'; plain += '\n'; continue; }
+                const text = escapeHtml(item.value);
+                if (item.type === 'added') {
+                    html += '<span style="color:' + addCol + ';font-weight:bold;">' + text + '</span> ';
+                    plain += '[+' + item.value + '+] ';
+                } else if (item.type === 'deleted') {
+                    html += '<span style="color:' + delCol + ';text-decoration:line-through;">' + text + '</span> ';
+                    plain += '[-' + item.value + '-] ';
+                } else {
+                    html += text + ' ';
+                    plain += item.value + ' ';
+                }
+            }
+            html += '</div>';
+
+            navigator.clipboard.write([
+                new ClipboardItem({
+                    'text/html': new Blob([html], { type: 'text/html' }),
+                    'text/plain': new Blob([plain.trim()], { type: 'text/plain' })
+                })
+            ]).then(() => showToast('Copied with formatting'));
+        });
+
+        // ===== TOGGLES =====
+
+        ignoreCaseBtn.addEventListener('click', () => {
+            ignoreCase = !ignoreCase;
+            ignoreCaseBtn.classList.toggle('active', ignoreCase);
+            localStorage.setItem('diffIgnoreCase', ignoreCase);
+            runDiff();
+        });
+
+        ignorePunctBtn.addEventListener('click', () => {
+            ignorePunct = !ignorePunct;
+            ignorePunctBtn.classList.toggle('active', ignorePunct);
+            localStorage.setItem('diffIgnorePunct', ignorePunct);
+            runDiff();
+        });
+
+        // ===== COMMON COLOR =====
+
+        commonColorBtn.addEventListener('click', () => {
+            useCommonColor = !useCommonColor;
+            commonColorBtn.classList.toggle('active', useCommonColor);
+            localStorage.setItem('diffUseCommonColor', useCommonColor);
+            addColorGroup.style.display = useCommonColor ? 'none' : '';
+            delColorGroup.style.display = useCommonColor ? 'none' : '';
+            commonColorGroup.style.display = useCommonColor ? '' : 'none';
+            if (useCommonColor) {
+                applyColors(commonColorValue, commonColorValue);
+            } else {
+                applyColors(addColorInput.value, delColorInput.value);
+            }
+        });
+
+        document.querySelector('.color-presets[data-target="common"]').querySelectorAll('.color-swatch').forEach(sw => {
+            sw.addEventListener('click', () => {
+                commonColorValue = sw.dataset.color;
+                commonColorInput.value = commonColorValue;
+                localStorage.setItem('diffCommonColorValue', commonColorValue);
+                document.querySelectorAll('.color-presets[data-target="common"] .color-swatch').forEach(s =>
+                    s.classList.toggle('active', s.dataset.color === commonColorValue));
+                applyColors(commonColorValue, commonColorValue);
+            });
+        });
+
+        commonColorInput.addEventListener('input', () => {
+            commonColorValue = commonColorInput.value;
+            localStorage.setItem('diffCommonColorValue', commonColorValue);
+            document.querySelectorAll('.color-presets[data-target="common"] .color-swatch').forEach(s =>
+                s.classList.remove('active'));
+            applyColors(commonColorValue, commonColorValue);
+        });
+
+        // ===== SEGMENTED CONTROLS =====
+
+        document.getElementById('diffModeCtrl').addEventListener('click', (e) => {
+            const btn = e.target.closest('.seg-btn');
+            if (!btn || btn.classList.contains('active')) return;
+            document.querySelectorAll('#diffModeCtrl .seg-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            diffMode = btn.dataset.value;
+            localStorage.setItem('diffMode', diffMode);
+            runDiff();
+        });
+
+        document.getElementById('viewModeCtrl').addEventListener('click', (e) => {
+            const btn = e.target.closest('.seg-btn');
+            if (!btn || btn.classList.contains('active')) return;
+            document.querySelectorAll('#viewModeCtrl .seg-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            viewMode = btn.dataset.value;
+            localStorage.setItem('diffViewMode', viewMode);
+            runDiff();
+        });
+
+        // ===== FONT SIZE =====
+
+        fontSlider.addEventListener('input', () => {
+            document.documentElement.style.setProperty('--font-size', fontSlider.value + 'px');
+            localStorage.setItem('diffFontSize', fontSlider.value);
+        });
+
+        // ===== DRAG & DROP =====
+
+        [originalEl, modifiedEl].forEach(ta => {
+            ta.addEventListener('dragover', (e) => { e.preventDefault(); ta.classList.add('drag-over'); });
+            ta.addEventListener('dragleave', () => ta.classList.remove('drag-over'));
+            ta.addEventListener('drop', (e) => {
+                e.preventDefault();
+                ta.classList.remove('drag-over');
+                const file = e.dataTransfer.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = () => { ta.value = reader.result; runDiff(); };
+                    reader.readAsText(file);
+                }
+            });
+        });
+
+        // ===== KEYBOARD SHORTCUTS =====
+
+        document.addEventListener('keydown', (e) => {
+            const mod = e.ctrlKey || e.metaKey;
+            if (mod && e.shiftKey && e.key.toLowerCase() === 's') { e.preventDefault(); swapBtn.click(); }
+            if (mod && e.shiftKey && e.key.toLowerCase() === 'k') { e.preventDefault(); clearBtn.click(); }
+        });
+
+        // ===== THEME =====
+
+        function setTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            themeBtn.textContent = theme === 'dark' ? 'Light Mode' : 'Dark Mode';
+        }
+
+        const savedTheme = localStorage.getItem('diffTheme')
+            || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        setTheme(savedTheme);
+
+        themeBtn.addEventListener('click', () => {
+            const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            setTheme(next);
+            localStorage.setItem('diffTheme', next);
+        });
+
+        // ===== COLORS =====
+
+        function applyColors(add, del) {
+            const s = document.documentElement.style;
+            s.setProperty('--add-color', add);
+            s.setProperty('--del-color', del);
+        }
+
+        function setColorForTarget(target, color) {
+            const input = target === 'add' ? addColorInput : delColorInput;
+            input.value = color;
+            localStorage.setItem(target === 'add' ? 'diffAddColor' : 'diffDelColor', color);
+            applyColors(addColorInput.value, delColorInput.value);
+            document.querySelectorAll('.color-presets[data-target="' + target + '"] .color-swatch').forEach(sw => {
+                sw.classList.toggle('active', sw.dataset.color === color);
+            });
+        }
+
+        document.querySelectorAll('.color-presets').forEach(group => {
+            group.querySelectorAll('.color-swatch').forEach(sw => {
+                sw.addEventListener('click', () => setColorForTarget(group.dataset.target, sw.dataset.color));
+            });
+        });
+
+        addColorInput.addEventListener('input', () => {
+            document.querySelectorAll('.color-presets[data-target="add"] .color-swatch').forEach(sw => sw.classList.remove('active'));
+            localStorage.setItem('diffAddColor', addColorInput.value);
+            applyColors(addColorInput.value, delColorInput.value);
+        });
+
+        delColorInput.addEventListener('input', () => {
+            document.querySelectorAll('.color-presets[data-target="del"] .color-swatch').forEach(sw => sw.classList.remove('active'));
+            localStorage.setItem('diffDelColor', delColorInput.value);
+            applyColors(addColorInput.value, delColorInput.value);
+        });
+
+        // ===== INIT =====
+
+        setColorForTarget('add', localStorage.getItem('diffAddColor') || '#3498db');
+        setColorForTarget('del', localStorage.getItem('diffDelColor') || '#e74c3c');
+
+        // Restore common color state
+        const savedCommonColor = localStorage.getItem('diffCommonColorValue');
+        if (savedCommonColor) { commonColorValue = savedCommonColor; commonColorInput.value = savedCommonColor; }
+        document.querySelectorAll('.color-presets[data-target="common"] .color-swatch').forEach(s =>
+            s.classList.toggle('active', s.dataset.color === commonColorValue));
+
+        if (localStorage.getItem('diffUseCommonColor') === 'true') {
+            useCommonColor = true;
+            commonColorBtn.classList.add('active');
+            addColorGroup.style.display = 'none';
+            delColorGroup.style.display = 'none';
+            commonColorGroup.style.display = '';
+            applyColors(commonColorValue, commonColorValue);
+        }
+
+        if (localStorage.getItem('diffIgnoreCase') === 'true') {
+            ignoreCase = true; ignoreCaseBtn.classList.add('active');
+        }
+        if (localStorage.getItem('diffIgnorePunct') === 'true') {
+            ignorePunct = true; ignorePunctBtn.classList.add('active');
+        }
+
+        const savedMode = localStorage.getItem('diffMode');
+        if (savedMode) {
+            diffMode = savedMode;
+            document.querySelectorAll('#diffModeCtrl .seg-btn').forEach(b =>
+                b.classList.toggle('active', b.dataset.value === diffMode));
+        }
+
+        const savedView = localStorage.getItem('diffViewMode');
+        if (savedView) {
+            viewMode = savedView;
+            document.querySelectorAll('#viewModeCtrl .seg-btn').forEach(b =>
+                b.classList.toggle('active', b.dataset.value === viewMode));
+        }
+
+        const savedFont = localStorage.getItem('diffFontSize');
+        if (savedFont) {
+            fontSlider.value = savedFont;
+            document.documentElement.style.setProperty('--font-size', savedFont + 'px');
+        }
+
+        // Apply initial view state
+        runDiff();
+    </script>
+</body>
+</html>
