@@ -11,7 +11,7 @@
             --text: #1a1a1a;
             --text-secondary: #666666;
             --border: #e0e0e0;
-            --add-color: #3498db;
+            --add-color: #0d47a1;
             --del-color: #e74c3c;
             --header-bg: #f8f9fa;
             --textarea-bg: #ffffff;
@@ -19,7 +19,7 @@
             --btn-hover: #d8d8d8;
             --panel-header-bg: #f0f0f0;
             --font-size: 14px;
-            --accent: #3498db;
+            --accent: #0d47a1;
         }
 
         [data-theme="dark"] {
@@ -245,7 +245,7 @@
         }
         .panel textarea::placeholder { color: var(--text-secondary); opacity: 0.5; }
         .panel textarea.drag-over {
-            background: #3498db11;
+            background: #0d47a111;
             outline: 2px dashed var(--add-color);
             outline-offset: -4px;
         }
@@ -271,7 +271,6 @@
         .diff-output .added,
         .diff-side-content .added {
             color: var(--add-color);
-            font-weight: 600;
         }
         .diff-output .deleted,
         .diff-side-content .deleted {
@@ -408,12 +407,12 @@
         <div class="opt-group" id="addColorGroup">
             <span class="opt-label">Added</span>
             <div class="color-presets" data-target="add">
-                <button class="color-swatch active" data-color="#3498db" style="background:#3498db" title="Blue"></button>
+                <button class="color-swatch active" data-color="#0d47a1" style="background:#0d47a1" title="Blue"></button>
                 <button class="color-swatch" data-color="#2ecc40" style="background:#2ecc40" title="Green"></button>
                 <button class="color-swatch" data-color="#1abc9c" style="background:#1abc9c" title="Teal"></button>
                 <button class="color-swatch" data-color="#9b59b6" style="background:#9b59b6" title="Purple"></button>
                 <button class="color-swatch" data-color="#f39c12" style="background:#f39c12" title="Orange"></button>
-                <input type="color" id="addColor" value="#3498db" title="Custom color">
+                <input type="color" id="addColor" value="#0d47a1" title="Custom color">
             </div>
         </div>
 
@@ -432,12 +431,12 @@
         <div class="opt-group" id="commonColorGroup" style="display:none">
             <span class="opt-label">Color</span>
             <div class="color-presets" data-target="common">
-                <button class="color-swatch active" data-color="#3498db" style="background:#3498db" title="Blue"></button>
+                <button class="color-swatch active" data-color="#0d47a1" style="background:#0d47a1" title="Blue"></button>
                 <button class="color-swatch" data-color="#e74c3c" style="background:#e74c3c" title="Red"></button>
                 <button class="color-swatch" data-color="#2ecc40" style="background:#2ecc40" title="Green"></button>
                 <button class="color-swatch" data-color="#9b59b6" style="background:#9b59b6" title="Purple"></button>
                 <button class="color-swatch" data-color="#f39c12" style="background:#f39c12" title="Orange"></button>
-                <input type="color" id="commonColor" value="#3498db" title="Custom color">
+                <input type="color" id="commonColor" value="#0d47a1" title="Custom color">
             </div>
         </div>
 
@@ -554,7 +553,7 @@
         let ignoreCase = false;
         let ignorePunct = false;
         let useCommonColor = false;
-        let commonColorValue = '#3498db';
+        let commonColorValue = '#0d47a1';
         let changeEls = [];
         let changeIdx = -1;
 
@@ -594,6 +593,11 @@
         function normalize(text) {
             return text
                 .replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+                .replace(/[\u2018\u2019\u201A\u2032]/g, "'")
+                .replace(/[\u201C\u201D\u201E\u2033]/g, '"')
+                .replace(/[\u2013\u2014]/g, '-')
+                .replace(/\u2026/g, '...')
+                .replace(/\u00A0/g, ' ')
                 .replace(/\t/g, ' ')
                 .replace(/[^\S\n]+/g, ' ')
                 .replace(/\n{3,}/g, '\n\n')
@@ -943,31 +947,38 @@
             const delCol = useCommonColor ? commonColorValue : delColorInput.value;
 
             let html = '<div style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;font-size:14px;line-height:1.7;">';
-            let plain = '';
 
             for (const item of lastDiffResult) {
-                if (item.value === '\n\n') { html += '<br><br>'; plain += '\n\n'; continue; }
-                if (item.value === '\n') { html += '<br>'; plain += '\n'; continue; }
+                if (item.value === '\n\n') { html += '<br><br>'; continue; }
+                if (item.value === '\n') { html += '<br>'; continue; }
                 const text = escapeHtml(item.value);
                 if (item.type === 'added') {
-                    html += '<span style="color:' + addCol + ';font-weight:bold;">' + text + '</span> ';
-                    plain += '[+' + item.value + '+] ';
+                    html += '<span style="color:' + addCol + ';">' + text + '</span> ';
                 } else if (item.type === 'deleted') {
                     html += '<span style="color:' + delCol + ';text-decoration:line-through;">' + text + '</span> ';
-                    plain += '[-' + item.value + '-] ';
                 } else {
                     html += text + ' ';
-                    plain += item.value + ' ';
                 }
             }
             html += '</div>';
 
-            navigator.clipboard.write([
-                new ClipboardItem({
-                    'text/html': new Blob([html], { type: 'text/html' }),
-                    'text/plain': new Blob([plain.trim()], { type: 'text/plain' })
-                })
-            ]).then(() => showToast('Copied with formatting'));
+            // Use temporary element + execCommand for reliable rich copy (works from file://)
+            const tmp = document.createElement('div');
+            tmp.innerHTML = html;
+            tmp.style.position = 'fixed';
+            tmp.style.left = '-9999px';
+            tmp.style.opacity = '0';
+            document.body.appendChild(tmp);
+
+            const range = document.createRange();
+            range.selectNodeContents(tmp);
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+            document.execCommand('copy');
+            sel.removeAllRanges();
+            document.body.removeChild(tmp);
+            showToast('Copied with formatting');
         });
 
         // ===== TOGGLES =====
@@ -1130,7 +1141,7 @@
 
         // ===== INIT =====
 
-        setColorForTarget('add', localStorage.getItem('diffAddColor') || '#3498db');
+        setColorForTarget('add', localStorage.getItem('diffAddColor') || '#0d47a1');
         setColorForTarget('del', localStorage.getItem('diffDelColor') || '#e74c3c');
 
         // Restore common color state
