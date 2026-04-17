@@ -1018,7 +1018,7 @@ small { font-size: 12px; color: var(--text-muted); }
     <aside class="sidebar">
       <div class="sidebar-header">
         <span class="sidebar-logo">Folio</span>
-        <span class="sidebar-version">v2.0.0</span>
+        <span class="sidebar-version">v2.1.0</span>
       </div>
       <nav id="feature-nav" class="feature-nav"></nav>
       <div class="sidebar-footer">
@@ -1119,7 +1119,7 @@ small { font-size: 12px; color: var(--text-muted); }
     promptPassword: () => promptPassword,
     showProgress: () => showProgress,
     toast: () => toast,
-    updateProgress: () => updateProgress
+    updateProgress: () => updateProgress2
   });
   function toast(message, type = "info", duration = 3500) {
     const container = document.getElementById("toast-container");
@@ -1226,7 +1226,7 @@ small { font-size: 12px; color: var(--text-muted); }
       msgEl.textContent = message;
     overlay?.classList.add("visible");
   }
-  function updateProgress(message) {
+  function updateProgress2(message) {
     const el = document.getElementById("progress-message");
     if (el)
       el.textContent = message;
@@ -39453,7 +39453,7 @@ end`;
         try {
           const sources = [];
           for (const entry of queue) {
-            updateProgress(`Loading ${entry.name}\u2026`);
+            updateProgress2(`Loading ${entry.name}\u2026`);
             let bytes2;
             if (entry.source === "workspace") {
               bytes2 = await readHandle(entry.handle);
@@ -39483,7 +39483,7 @@ end`;
             pageStarts.push(running);
             running += s.pages.length;
           }
-          updateProgress("Merging\u2026");
+          updateProgress2("Merging\u2026");
           const merged = await mergePages(sources);
           if (addBookmarks) {
             setOutline(
@@ -39495,7 +39495,7 @@ end`;
             );
             merged.setTitle(sources.map((s) => s.name.replace(/\.pdf$/i, "")).join(" + "));
           }
-          updateProgress("Saving\u2026");
+          updateProgress2("Saving\u2026");
           const bytes = await save2(merged);
           if (targetDir) {
             await writeToWorkspace(targetDir, outputName, bytes);
@@ -66083,7 +66083,7 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
           pageCountEl.textContent = `${total} page${total !== 1 ? "s" : ""}`;
           container.querySelector("#extract-filename").value = sourceName + "_extracted.pdf";
           container.querySelector("#split-file-label").textContent = name;
-          updateProgress("Rendering thumbnails\u2026");
+          updateProgress2("Rendering thumbnails\u2026");
           renderDoc = await loadForRender(bytes);
           container.querySelector("#split-before-load").style.display = "none";
           const thumbSection = container.querySelector("#split-thumb-section");
@@ -66286,7 +66286,7 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
         showProgress(`Splitting ${total} pages\u2026`);
         try {
           for (let i = 0; i < total; i++) {
-            updateProgress(`Page ${i + 1} of ${total}\u2026`);
+            updateProgress2(`Page ${i + 1} of ${total}\u2026`);
             const out = await extractPages(sourceDoc, [i]);
             const bytes = await save2(out);
             const filename = `${safeName(sourceName)}_p${String(i + 1).padStart(padLen, "0")}.pdf`;
@@ -66344,7 +66344,7 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
               toast(`"${row.name}": invalid range \u2014 skipped`, "warning");
               continue;
             }
-            updateProgress(`Section ${i + 1}/${valid.length}: ${row.name}\u2026`);
+            updateProgress2(`Section ${i + 1}/${valid.length}: ${row.name}\u2026`);
             const out = await extractPages(sourceDoc, indices);
             const bytes = await save2(out);
             await writeToWorkspace(rangesDir, ensurePdf(safeName(row.name || `section_${i + 1}`)), bytes);
@@ -66527,7 +66527,7 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
             annotating: container.querySelector("#perm-annot").checked,
             fillingForms: container.querySelector("#perm-forms").checked
           };
-          updateProgress("Encrypting\u2026");
+          updateProgress2("Encrypting\u2026");
           const outBytes = await protect(doc, { userPassword: userPwd, ownerPassword: ownerPwd, permissions });
           const outName = protectFile.name.replace(/\.pdf$/i, "_protected.pdf");
           await saveAs(outBytes, outName);
@@ -66558,11 +66558,11 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
           if (err.code !== "WRONG_PASSWORD")
             throw err;
         }
-        updateProgress("Decrypting via fallback renderer\u2026");
+        updateProgress2("Decrypting via fallback renderer\u2026");
         const renderDoc = await loadForRender(bytes, pwd);
-        updateProgress("Converting pages to images\u2026");
+        updateProgress2("Converting pages to images\u2026");
         const imageBytes = await renderToUnencryptedPdf(renderDoc, {
-          onProgress: (n, t) => updateProgress(`Page ${n}/${t}\u2026`)
+          onProgress: (n, t) => updateProgress2(`Page ${n}/${t}\u2026`)
         });
         renderDoc.destroy();
         toast("Used image-based fallback \u2014 text may not be selectable.", "warning", 5e3);
@@ -66588,9 +66588,9 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
         try {
           const bytes = await readFile(removeFile);
           try {
-            updateProgress("Decrypting\u2026");
+            updateProgress2("Decrypting\u2026");
             const doc = await load2(bytes, password);
-            updateProgress("Saving unlocked PDF\u2026");
+            updateProgress2("Saving unlocked PDF\u2026");
             const outBytes2 = await save2(doc);
             const outName2 = removeFile.name.replace(/\.pdf$/i, "_unlocked.pdf");
             await saveAs(outBytes2, outName2);
@@ -66600,7 +66600,7 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
             if (err.code !== "WRONG_PASSWORD")
               throw err;
           }
-          updateProgress("Using fallback renderer\u2026");
+          updateProgress2("Using fallback renderer\u2026");
           let renderDoc;
           try {
             renderDoc = await loadForRender(bytes, password);
@@ -66617,7 +66617,7 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
           }
           const total = renderDoc.numPages;
           const outBytes = await renderToUnencryptedPdf(renderDoc, {
-            onProgress: (n, t) => updateProgress(`Rendering page ${n} of ${t}\u2026`)
+            onProgress: (n, t) => updateProgress2(`Rendering page ${n} of ${t}\u2026`)
           });
           renderDoc.destroy();
           const outName = removeFile.name.replace(/\.pdf$/i, "_unlocked.pdf");
@@ -66729,7 +66729,7 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
             } catch (err2) {
               if (err2.code !== "WRONG_PASSWORD")
                 throw err2;
-              updateProgress("Trying fallback renderer\u2026");
+              updateProgress2("Trying fallback renderer\u2026");
               let renderDoc;
               try {
                 renderDoc = await loadForRender(bytes, pwd);
@@ -66742,7 +66742,7 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
               }
               const total = renderDoc.numPages;
               const outBytes2 = await renderToUnencryptedPdf(renderDoc, {
-                onProgress: (n, t) => updateProgress(`Rendering page ${n} of ${t}\u2026`)
+                onProgress: (n, t) => updateProgress2(`Rendering page ${n} of ${t}\u2026`)
               });
               renderDoc.destroy();
               const outName2 = srcFile.name.replace(/\.pdf$/i, "_unlocked.pdf");
@@ -66755,7 +66755,7 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
               return;
             }
           }
-          updateProgress("Saving unlocked PDF\u2026");
+          updateProgress2("Saving unlocked PDF\u2026");
           const outBytes = await save2(doc);
           const outName = srcFile.name.replace(/\.pdf$/i, "_unlocked.pdf");
           await saveAs(outBytes, outName);
@@ -66887,7 +66887,7 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
             showProgress("Decrypting\u2026");
             doc = await load2(bytes, pwd);
           }
-          updateProgress("Loading thumbnails\u2026");
+          updateProgress2("Loading thumbnails\u2026");
           if (renderDoc)
             renderDoc.destroy();
           renderDoc = await loadForRender(bytes, filePassword);
@@ -67209,7 +67209,7 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
             if (slot.extraRotation)
               rotatePages(outDoc, [i], slot.extraRotation);
           });
-          updateProgress("Saving\u2026");
+          updateProgress2("Saving\u2026");
           const bytes = await save2(outDoc);
           await saveAs(bytes, outputName);
           toast(
@@ -67507,9 +67507,9 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
             const position = container.querySelector('input[name="wmt-pos"]:checked').value;
             const opacity = parseInt(opacitySlider.value) / 100;
             const fontSize = Math.max(8, parseInt(container.querySelector("#wmt-size").value) || 60);
-            updateProgress("Stamping watermark\u2026");
+            updateProgress2("Stamping watermark\u2026");
             await addTextWatermark(doc, text, { opacity, fontSize, color, position, pageIndices });
-            updateProgress("Saving\u2026");
+            updateProgress2("Saving\u2026");
             const outName = ensurePdf(
               container.querySelector("#wmt-output").value.trim() || stripExt(srcFile.name) + "_watermarked"
             );
@@ -67621,14 +67621,14 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
             const position = container.querySelector('input[name="wmi-pos"]:checked').value;
             const opacity = parseInt(opacitySlider.value) / 100;
             const scale2 = parseFloat(container.querySelector("#wmi-size").value) || 0.35;
-            updateProgress("Stamping image watermark\u2026");
+            updateProgress2("Stamping image watermark\u2026");
             await addImageWatermark(doc, imageBytes, imageType, {
               opacity,
               scale: scale2,
               position,
               pageIndices
             });
-            updateProgress("Saving\u2026");
+            updateProgress2("Saving\u2026");
             const outName = ensurePdf(
               container.querySelector("#wmi-output").value.trim() || stripExt(pdfFile.name) + "_watermarked"
             );
@@ -67835,7 +67835,7 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
             parseInt(hex.slice(3, 5), 16) / 255,
             parseInt(hex.slice(5, 7), 16) / 255
           ];
-          updateProgress("Adding page numbers\u2026");
+          updateProgress2("Adding page numbers\u2026");
           await addPageNumbers(doc, {
             format,
             position,
@@ -67845,7 +67845,7 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
             startAt,
             skipPages: skipFirst ? [0] : []
           });
-          updateProgress("Saving\u2026");
+          updateProgress2("Saving\u2026");
           const outName = ensurePdf(
             container.querySelector("#pn-output").value.trim() || stripExt(srcFile.name) + "_numbered"
           );
@@ -68043,10 +68043,10 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
           const outBytes = await renderToUnencryptedPdf(renderDoc, {
             scale: preset.scale,
             quality: preset.quality,
-            onProgress: (n, t) => updateProgress(`Compressing page ${n} of ${t}\u2026`)
+            onProgress: (n, t) => updateProgress2(`Compressing page ${n} of ${t}\u2026`)
           });
           renderDoc.destroy();
-          updateProgress("Saving\u2026");
+          updateProgress2("Saving\u2026");
           const outName = ensurePdf(
             container.querySelector("#cmp-output").value.trim() || stripExt(srcFile.name) + "_compressed"
           );
@@ -68395,7 +68395,7 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
             hideMenubar: container.querySelector("#vp-hide-menubar").checked
           });
           pdfDoc.setModificationDate(/* @__PURE__ */ new Date());
-          updateProgress("Saving\u2026");
+          updateProgress2("Saving\u2026");
           const outName = ensurePdf(container.querySelector("#meta-output").value.trim() || stripExt(srcFile.name) + "_meta");
           const outBytes = await save2(pdfDoc);
           await saveAs(outBytes, outName);
@@ -68589,7 +68589,7 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
           const doc = await PDFDocument2.create();
           for (let i = 0; i < queue.length; i++) {
             const item = queue[i];
-            updateProgress(`Embedding image ${i + 1} of ${queue.length}\u2026`);
+            updateProgress2(`Embedding image ${i + 1} of ${queue.length}\u2026`);
             const bytes = await item.file.arrayBuffer();
             const isJpeg = /\.(jpe?g)$/i.test(item.file.name) || item.file.type === "image/jpeg";
             const isPng = /\.png$/i.test(item.file.name) || item.file.type === "image/png";
@@ -68625,7 +68625,7 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
             const page = doc.addPage([pageW, pageH]);
             page.drawImage(imgEmbed, { x: drawX, y: drawY, width: drawW, height: drawH });
           }
-          updateProgress("Saving\u2026");
+          updateProgress2("Saving\u2026");
           const { PDFName: PDFName2 } = await Promise.resolve().then(() => (init_es2(), es_exports));
           const outBytes = await doc.save();
           await saveAs(outBytes, outName);
@@ -68837,7 +68837,7 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
           } else {
             pageNums = Array.from({ length: totalPgs }, (_, i) => i + 1);
           }
-          updateProgress("Choose a destination folder\u2026");
+          updateProgress2("Choose a destination folder\u2026");
           let destDir;
           try {
             destDir = await window.showDirectoryPicker({ mode: "readwrite" });
@@ -68849,7 +68849,7 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
           const pad = String(pageNums[pageNums.length - 1]).length;
           for (let i = 0; i < pageNums.length; i++) {
             const pNum = pageNums[i];
-            updateProgress(`Rendering page ${pNum} of ${totalPgs} (${i + 1}/${pageNums.length})\u2026`);
+            updateProgress2(`Rendering page ${pNum} of ${totalPgs} (${i + 1}/${pageNums.length})\u2026`);
             const page = await rDoc.getPage(pNum);
             const viewport = page.getViewport({ scale: scale2 });
             const canvas = document.createElement("canvas");
@@ -69121,7 +69121,7 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
           const totalPages = rDoc.numPages;
           const parts = [];
           for (let p = 1; p <= totalPages; p++) {
-            updateProgress(`Extracting text: page ${p} of ${totalPages}\u2026`);
+            updateProgress2(`Extracting text: page ${p} of ${totalPages}\u2026`);
             const page = await rDoc.getPage(p);
             const content = await page.getTextContent();
             page.cleanup();
@@ -69577,7 +69577,7 @@ ${trimmed}`);
             const cropH = Math.max(5, h - topPt - bottomPt);
             page.setCropBox(leftPt, bottomPt, cropW, cropH);
           }
-          updateProgress("Saving\u2026");
+          updateProgress2("Saving\u2026");
           const outBytes = await save2(doc);
           const outName = stripExt(srcFile.name) + "_cropped.pdf";
           await saveAs(outBytes, outName);
@@ -69869,7 +69869,7 @@ ${trimmed}`);
           } else {
             pageNums = Array.from({ length: totalPgs }, (_, i) => i + 1);
           }
-          updateProgress("Choose a destination folder\u2026");
+          updateProgress2("Choose a destination folder\u2026");
           let destDir;
           try {
             destDir = await window.showDirectoryPicker({ mode: "readwrite" });
@@ -69885,7 +69885,7 @@ ${trimmed}`);
           let skippedSmall = 0;
           for (let i = 0; i < pageNums.length; i++) {
             const pNum = pageNums[i];
-            updateProgress(`Scanning page ${pNum} (${i + 1}/${pageNums.length}) \u2014 ${savedCount} image${savedCount === 1 ? "" : "s"} so far\u2026`);
+            updateProgress2(`Scanning page ${pNum} (${i + 1}/${pageNums.length}) \u2014 ${savedCount} image${savedCount === 1 ? "" : "s"} so far\u2026`);
             const page = await rDoc.getPage(pNum);
             const ops = await page.getOperatorList();
             const imagesOnPage = [];
@@ -70101,10 +70101,10 @@ ${trimmed}`);
           const outBytes = await renderToUnencryptedPdf(rDoc, {
             scale: scale2,
             quality,
-            onProgress: (n, t) => updateProgress(`Rendering page ${n} of ${t}\u2026`)
+            onProgress: (n, t) => updateProgress2(`Rendering page ${n} of ${t}\u2026`)
           });
           rDoc.destroy();
-          updateProgress("Saving flattened PDF\u2026");
+          updateProgress2("Saving flattened PDF\u2026");
           const outName = srcFile.name.replace(/\.pdf$/i, "_flat.pdf");
           await saveAs(outBytes, outName);
           const kb = Math.round(outBytes.length / 1024);
@@ -71931,7 +71931,7 @@ ${trimmed}`);
               applied++;
             }
           }
-          updateProgress("Saving\u2026");
+          updateProgress2("Saving\u2026");
           const outBytes = await save2(doc);
           const outName = nameEl.textContent.replace(/\.pdf$/i, "_redacted.pdf");
           await saveAs(outBytes, outName);
@@ -72134,9 +72134,9 @@ ${trimmed}`);
           const gutterMm = parseFloat(container.querySelector("#nu-gutter").value) || 0;
           const marginMm = parseFloat(container.querySelector("#nu-margin").value) || 0;
           const drawBord = container.querySelector("#nu-border").checked;
-          const PT_PER_MM3 = 72 / 25.4;
-          const gutter = gutterMm * PT_PER_MM3;
-          const margin = marginMm * PT_PER_MM3;
+          const PT_PER_MM5 = 72 / 25.4;
+          const gutter = gutterMm * PT_PER_MM5;
+          const margin = marginMm * PT_PER_MM5;
           let srcPageIdx;
           if (container.querySelector("#nu-pages-sel").value === "custom") {
             const raw = container.querySelector("#nu-pages-custom").value.trim();
@@ -72161,7 +72161,7 @@ ${trimmed}`);
           }
           while (orderedIdx.length % perSheet !== 0)
             orderedIdx.push(null);
-          updateProgress("Embedding pages\u2026");
+          updateProgress2("Embedding pages\u2026");
           const outDoc = await PDFDocument.create();
           const srcPages = srcDoc.getPages();
           const embedded = /* @__PURE__ */ new Map();
@@ -72170,7 +72170,7 @@ ${trimmed}`);
           }
           const numSheets = orderedIdx.length / perSheet;
           for (let s = 0; s < numSheets; s++) {
-            updateProgress(`Building sheet ${s + 1} of ${numSheets}\u2026`);
+            updateProgress2(`Building sheet ${s + 1} of ${numSheets}\u2026`);
             const sheet = outDoc.addPage([sheetW, sheetH]);
             const pageSet = orderedIdx.slice(s * perSheet, (s + 1) * perSheet);
             let cols, rows;
@@ -72220,7 +72220,7 @@ ${trimmed}`);
               }
             }
           }
-          updateProgress("Saving\u2026");
+          updateProgress2("Saving\u2026");
           const outBytes = await outDoc.save();
           const suffix = layout === "booklet" ? "_booklet" : `_${layout}`;
           const outName = srcFile.name.replace(/\.pdf$/i, `${suffix}.pdf`);
@@ -72239,6 +72239,1784 @@ ${trimmed}`);
           hideProgress();
         }
       });
+    }
+  });
+
+  // src/features/repair.js
+  init_es2();
+  init_ui();
+  registerFeature({
+    id: "repair",
+    name: "Repair PDF",
+    category: "Edit",
+    icon: "\u{1F527}",
+    description: "Attempt to recover a damaged or malformed PDF",
+    render(container) {
+      container.innerHTML = `
+      <div class="feature-header">
+        <h2>Repair PDF</h2>
+        <p class="feature-desc">
+          Attempt to recover a damaged, truncated or malformed PDF.
+          Uses two recovery methods \u2014 the first preserves text and vectors;
+          the fallback saves content as images.
+        </p>
+      </div>
+
+      <div class="panel">
+
+        <div class="section-label">Select PDF to Repair</div>
+        <div class="file-drop-zone" id="rep-drop">
+          Drag a PDF here, or
+          <button class="btn btn-sm" id="rep-browse">Browse</button>
+          <input type="file" id="rep-input" accept=".pdf" hidden>
+        </div>
+        <div id="rep-filename" class="file-name-display"></div>
+
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;margin:14px 0;font-size:13px;color:var(--text-muted);line-height:1.6;">
+          <strong style="color:var(--text);">Method 1 \u2014 Structural re-parse (preserves text)</strong><br>
+          Re-reads the raw byte stream tolerantly, rebuilds the cross-reference table,
+          and re-serialises a clean copy. Text stays selectable.
+          <br><br>
+          <strong style="color:var(--text);">Method 2 \u2014 Render fallback (image-based)</strong><br>
+          If Method 1 fails, each page is rendered with PDF.js (which has an even more
+          lenient parser) and saved as a JPEG image. Text is no longer selectable, but
+          the visual content is preserved.
+          <br><br>
+          <strong style="color:var(--text);">What it won't fix</strong><br>
+          Truncated files missing more than a few pages, files encrypted with an unknown
+          password, or files with corrupted image streams (those pages will render as
+          blank or garbled).
+        </div>
+
+        <div class="action-bar">
+          <button class="btn btn-primary btn-lg" id="rep-run" disabled>Attempt Repair</button>
+        </div>
+        <div class="status-text" id="rep-status" style="text-align:center;margin-top:8px;"></div>
+
+      </div>
+    `;
+      let srcFile = null;
+      const dropZone = container.querySelector("#rep-drop");
+      const input = container.querySelector("#rep-input");
+      const nameEl = container.querySelector("#rep-filename");
+      const runBtn = container.querySelector("#rep-run");
+      const statusEl = container.querySelector("#rep-status");
+      const setFile = (file) => {
+        srcFile = file;
+        nameEl.textContent = file.name;
+        runBtn.disabled = false;
+        statusEl.textContent = "";
+      };
+      dropZone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropZone.classList.add("drag-over");
+      });
+      dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag-over"));
+      dropZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropZone.classList.remove("drag-over");
+        const f = [...e.dataTransfer.files].find((f2) => f2.name.toLowerCase().endsWith(".pdf"));
+        if (f)
+          setFile(f);
+      });
+      container.querySelector("#rep-browse").addEventListener("click", () => input.click());
+      input.addEventListener("change", (e) => {
+        if (e.target.files[0])
+          setFile(e.target.files[0]);
+        input.value = "";
+      });
+      runBtn.addEventListener("click", async () => {
+        if (!srcFile)
+          return;
+        showProgress("Reading file\u2026");
+        try {
+          const bytes = await readFile(srcFile);
+          updateProgress2("Attempting structural repair\u2026");
+          let tier1Success = false;
+          try {
+            const doc = await PDFDocument.load(bytes, {
+              ignoreEncryption: true,
+              throwOnInvalidObject: false,
+              updateMetadata: false
+            });
+            const outBytes2 = await doc.save({ useObjectStreams: false });
+            const outName2 = srcFile.name.replace(/\.pdf$/i, "_repaired.pdf");
+            await saveAs(outBytes2, outName2);
+            const n = doc.getPageCount();
+            toast(`Repaired (Method 1) \u2192 ${outName2} \xB7 ${n} page${n !== 1 ? "s" : ""} recovered`, "success", 5e3);
+            statusEl.textContent = `Method 1 succeeded \u2014 ${n} pages, text preserved.`;
+            tier1Success = true;
+          } catch (err1) {
+            console.warn("Repair tier 1 failed:", err1.message);
+          }
+          if (tier1Success)
+            return;
+          updateProgress2("Structural repair failed \u2014 trying render fallback\u2026");
+          let rDoc;
+          try {
+            rDoc = await loadForRender(bytes);
+          } catch (err2) {
+            throw new Error(`Both repair methods failed.
+
+Method 1: structural re-parse
+Method 2: ${err2.message}`);
+          }
+          const total = rDoc.numPages;
+          const outBytes = await renderToUnencryptedPdf(rDoc, {
+            scale: 2,
+            quality: 0.88,
+            onProgress: (n, t) => updateProgress2(`Rendering page ${n} of ${t}\u2026`)
+          });
+          rDoc.destroy();
+          const outName = srcFile.name.replace(/\.pdf$/i, "_repaired_images.pdf");
+          await saveAs(outBytes, outName);
+          toast(
+            `Repaired (Method 2 \u2014 image fallback) \u2192 ${outName} \xB7 ${total} pages \xB7 text not selectable`,
+            "success",
+            6e3
+          );
+          statusEl.textContent = `Method 2 succeeded \u2014 ${total} pages as images. Text is not selectable.`;
+        } catch (err) {
+          if (err.name !== "AbortError") {
+            console.error(err);
+            toast("Repair failed: " + err.message, "error", 6e3);
+            statusEl.textContent = "Could not recover this file.";
+          }
+        } finally {
+          hideProgress();
+        }
+      });
+    }
+  });
+
+  // src/features/strip-elements.js
+  init_es2();
+  init_ui();
+  registerFeature({
+    id: "strip-elements",
+    name: "Strip Elements",
+    category: "Security",
+    icon: "\u{1F9F9}",
+    description: "Remove JS, annotations, bookmarks, metadata and more before sharing",
+    render(container) {
+      container.innerHTML = `
+      <div class="feature-header">
+        <h2>Strip Elements</h2>
+        <p class="feature-desc">
+          Selectively remove invisible or sensitive internals from a PDF before
+          sharing \u2014 without changing the visible page content.
+        </p>
+      </div>
+
+      <div class="feature-split">
+
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">\u2460 Source PDF</span></div>
+          <div class="file-drop-zone" id="se-drop">
+            <span>Drag a PDF here, or</span>
+            <button class="btn btn-sm" id="se-browse">Browse</button>
+            <input type="file" id="se-input" accept=".pdf" hidden>
+          </div>
+          <div id="se-filename" class="file-name-display"></div>
+          <div id="se-info" class="status-text" style="margin-top:4px;"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">\u2461 What to Remove</span></div>
+
+          <div style="display:flex;flex-direction:column;gap:10px;">
+
+            <label class="option-row" style="cursor:pointer;user-select:none;">
+              <input type="checkbox" id="se-js"   checked style="width:auto;margin-right:6px;">
+              <div>
+                <strong>JavaScript actions</strong>
+                <div class="status-text">OpenAction, page /AA scripts, form JS</div>
+              </div>
+            </label>
+
+            <label class="option-row" style="cursor:pointer;user-select:none;">
+              <input type="checkbox" id="se-annots" checked style="width:auto;margin-right:6px;">
+              <div>
+                <strong>Annotations</strong>
+                <div class="status-text">Comments, highlights, sticky notes, ink drawings, links</div>
+              </div>
+            </label>
+
+            <label class="option-row" style="cursor:pointer;user-select:none;">
+              <input type="checkbox" id="se-bookmarks" checked style="width:auto;margin-right:6px;">
+              <div>
+                <strong>Bookmarks / Outline</strong>
+                <div class="status-text">Navigation tree shown in PDF reader sidebar</div>
+              </div>
+            </label>
+
+            <label class="option-row" style="cursor:pointer;user-select:none;">
+              <input type="checkbox" id="se-embedded" checked style="width:auto;margin-right:6px;">
+              <div>
+                <strong>Embedded files</strong>
+                <div class="status-text">File attachments and portfolios</div>
+              </div>
+            </label>
+
+            <label class="option-row" style="cursor:pointer;user-select:none;">
+              <input type="checkbox" id="se-forms" style="width:auto;margin-right:6px;">
+              <div>
+                <strong>Form fields (AcroForm)</strong>
+                <div class="status-text">Interactive fields and any filled-in data</div>
+              </div>
+            </label>
+
+            <label class="option-row" style="cursor:pointer;user-select:none;">
+              <input type="checkbox" id="se-meta" checked style="width:auto;margin-right:6px;">
+              <div>
+                <strong>Document metadata</strong>
+                <div class="status-text">Author, Title, Keywords, Creator, Producer, XMP stream</div>
+              </div>
+            </label>
+
+            <label class="option-row" style="cursor:pointer;user-select:none;">
+              <input type="checkbox" id="se-sigs" checked style="width:auto;margin-right:6px;">
+              <div>
+                <strong>Digital signatures</strong>
+                <div class="status-text">Signature fields and SigFlags (cryptographic cert removed)</div>
+              </div>
+            </label>
+
+          </div>
+
+          <div class="action-bar" style="margin-top:20px;">
+            <button class="btn btn-primary btn-lg" id="se-run" disabled
+              style="width:100%;justify-content:center;">
+              Strip Selected Elements
+            </button>
+          </div>
+        </div>
+
+      </div>
+    `;
+      let srcFile = null;
+      const nameEl = container.querySelector("#se-filename");
+      const infoEl = container.querySelector("#se-info");
+      const runBtn = container.querySelector("#se-run");
+      async function loadFile(file) {
+        srcFile = file;
+        nameEl.textContent = file.name;
+        showProgress("Loading\u2026");
+        try {
+          const bytes = await readFile(file);
+          const doc = await load2(bytes).catch(async (err) => {
+            if (err.code !== "ENCRYPTED")
+              throw err;
+            hideProgress();
+            const pwd = await promptPassword(file.name);
+            if (!pwd)
+              throw Object.assign(new Error("Cancelled"), { name: "AbortError" });
+            showProgress("Decrypting\u2026");
+            return load2(bytes, pwd);
+          });
+          const n = doc.getPageCount();
+          infoEl.textContent = `${n} page${n > 1 ? "s" : ""}`;
+          runBtn.disabled = false;
+        } catch (err) {
+          if (err.name !== "AbortError")
+            toast("Failed to load: " + err.message, "error");
+        } finally {
+          hideProgress();
+        }
+      }
+      const dropZone = container.querySelector("#se-drop");
+      const input = container.querySelector("#se-input");
+      dropZone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropZone.classList.add("drag-over");
+      });
+      dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag-over"));
+      dropZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropZone.classList.remove("drag-over");
+        const f = [...e.dataTransfer.files].find((f2) => f2.name.toLowerCase().endsWith(".pdf"));
+        if (f)
+          loadFile(f);
+      });
+      container.querySelector("#se-browse").addEventListener("click", () => input.click());
+      input.addEventListener("change", (e) => {
+        if (e.target.files[0]) {
+          loadFile(e.target.files[0]);
+          input.value = "";
+        }
+      });
+      runBtn.addEventListener("click", async () => {
+        if (!srcFile)
+          return;
+        const strip = {
+          js: container.querySelector("#se-js").checked,
+          annots: container.querySelector("#se-annots").checked,
+          bookmarks: container.querySelector("#se-bookmarks").checked,
+          embedded: container.querySelector("#se-embedded").checked,
+          forms: container.querySelector("#se-forms").checked,
+          meta: container.querySelector("#se-meta").checked,
+          sigs: container.querySelector("#se-sigs").checked
+        };
+        if (!Object.values(strip).some(Boolean)) {
+          toast("Select at least one element to remove.", "warning");
+          return;
+        }
+        showProgress("Loading PDF\u2026");
+        try {
+          const bytes = await readFile(srcFile);
+          let doc;
+          try {
+            doc = await load2(bytes);
+          } catch (err) {
+            if (err.code !== "ENCRYPTED")
+              throw err;
+            hideProgress();
+            const pwd = await promptPassword(srcFile.name);
+            if (!pwd)
+              return;
+            showProgress("Decrypting\u2026");
+            doc = await load2(bytes, pwd);
+          }
+          const catalog = doc.catalog;
+          const context = doc.context;
+          const pages = doc.getPages();
+          const removed = [];
+          const del = (dict, key) => {
+            try {
+              dict.delete(PDFName_default.of(key));
+            } catch {
+            }
+          };
+          if (strip.js) {
+            del(catalog, "OpenAction");
+            del(catalog, "AA");
+            try {
+              const namesRef = catalog.get(PDFName_default.of("Names"));
+              const namesDict = namesRef ? context.lookup(namesRef) : null;
+              if (namesDict)
+                del(namesDict, "JavaScript");
+            } catch {
+            }
+            for (const page of pages) {
+              try {
+                del(page.node, "AA");
+              } catch {
+              }
+            }
+            removed.push("JavaScript");
+          }
+          if (strip.annots) {
+            for (const page of pages) {
+              try {
+                del(page.node, "Annots");
+              } catch {
+              }
+            }
+            removed.push("Annotations");
+          }
+          if (strip.bookmarks) {
+            del(catalog, "Outlines");
+            try {
+              const pm = catalog.get(PDFName_default.of("PageMode"))?.toString();
+              if (pm === "/UseOutlines") {
+                catalog.set(PDFName_default.of("PageMode"), PDFName_default.of("UseNone"));
+              }
+            } catch {
+            }
+            removed.push("Bookmarks");
+          }
+          if (strip.embedded) {
+            try {
+              const namesRef = catalog.get(PDFName_default.of("Names"));
+              const namesDict = namesRef ? context.lookup(namesRef) : null;
+              if (namesDict)
+                del(namesDict, "EmbeddedFiles");
+            } catch {
+            }
+            del(catalog, "Collection");
+            removed.push("Embedded files");
+          }
+          if (strip.forms) {
+            try {
+              const form = doc.getForm();
+              if (form.getFields().length > 0) {
+                form.flatten();
+              }
+            } catch {
+            }
+            del(catalog, "AcroForm");
+            removed.push("Form fields");
+          }
+          if (strip.meta) {
+            try {
+              doc.setTitle("");
+            } catch {
+            }
+            try {
+              doc.setAuthor("");
+            } catch {
+            }
+            try {
+              doc.setSubject("");
+            } catch {
+            }
+            try {
+              doc.setKeywords([]);
+            } catch {
+            }
+            try {
+              doc.setCreator("");
+            } catch {
+            }
+            try {
+              doc.setProducer("");
+            } catch {
+            }
+            del(catalog, "Metadata");
+            removed.push("Metadata");
+          }
+          if (strip.sigs) {
+            try {
+              const acroFormRef = catalog.get(PDFName_default.of("AcroForm"));
+              const acroFormDict = acroFormRef ? context.lookup(acroFormRef) : null;
+              if (acroFormDict) {
+                del(acroFormDict, "SigFlags");
+                const fieldsRef = acroFormDict.get(PDFName_default.of("Fields"));
+                if (fieldsRef) {
+                  const fields = context.lookup(fieldsRef);
+                  if (fields instanceof PDFArray_default) {
+                    const filtered = [];
+                    for (let i = 0; i < fields.size(); i++) {
+                      const ref = fields.get(i);
+                      const fld = context.lookup(ref);
+                      const ft = fld?.get?.(PDFName_default.of("FT"))?.toString?.();
+                      if (ft !== "/Sig")
+                        filtered.push(ref);
+                    }
+                    const newArr = PDFArray_default.withContext(context);
+                    filtered.forEach((r) => newArr.push(r));
+                    acroFormDict.set(PDFName_default.of("Fields"), newArr);
+                  }
+                }
+              }
+            } catch {
+            }
+            removed.push("Digital signatures");
+          }
+          const outBytes = await save2(doc);
+          const outName = srcFile.name.replace(/\.pdf$/i, "_stripped.pdf");
+          await saveAs(outBytes, outName);
+          toast(
+            `Stripped: ${removed.join(", ")} \u2192 ${outName}`,
+            "success",
+            5e3
+          );
+        } catch (err) {
+          if (err.name !== "AbortError") {
+            console.error(err);
+            toast("Failed: " + err.message, "error");
+          }
+        } finally {
+          hideProgress();
+        }
+      });
+    }
+  });
+
+  // src/features/normalise-pages.js
+  init_es2();
+  init_ui();
+  var PT_PER_MM3 = 72 / 25.4;
+  var SIZES = {
+    "a4": [595.28, 841.89],
+    "letter": [612, 792],
+    "a3": [841.89, 1190.55],
+    "a5": [419.53, 595.28],
+    "a4l": [841.89, 595.28],
+    // A4 landscape
+    "letterl": [792, 612]
+    // Letter landscape
+  };
+  registerFeature({
+    id: "normalise-pages",
+    name: "Normalise Page Size",
+    category: "Edit",
+    icon: "\u2B1C",
+    description: "Make every page the same size \u2014 useful for mixed-format documents",
+    render(container) {
+      container.innerHTML = `
+      <div class="feature-header">
+        <h2>Normalise Page Size</h2>
+        <p class="feature-desc">
+          Resize all pages to the same size. Content is either scaled to fit
+          or centered on the new page.
+        </p>
+      </div>
+
+      <div class="feature-split">
+
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">\u2460 Source PDF</span></div>
+          <div class="file-drop-zone" id="np-drop">
+            <span>Drag a PDF here, or</span>
+            <button class="btn btn-sm" id="np-browse">Browse</button>
+            <input type="file" id="np-input" accept=".pdf" hidden>
+          </div>
+          <div id="np-filename" class="file-name-display"></div>
+          <div id="np-info" class="status-text" style="margin-top:4px;"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">\u2461 Target Size</span></div>
+
+          <div class="option-row">
+            <label>Page size</label>
+            <select id="np-size" class="input" style="max-width:220px;">
+              <option value="a4"      selected>A4 Portrait  (210\xD7297 mm)</option>
+              <option value="a4l">A4 Landscape  (297\xD7210 mm)</option>
+              <option value="letter">Letter Portrait  (8.5\xD711 in)</option>
+              <option value="letterl">Letter Landscape  (11\xD78.5 in)</option>
+              <option value="a3">A3 Portrait  (297\xD7420 mm)</option>
+              <option value="a5">A5 Portrait  (148\xD7210 mm)</option>
+              <option value="first">Match first page</option>
+              <option value="most">Match most common size</option>
+              <option value="custom">Custom\u2026</option>
+            </select>
+          </div>
+
+          <div id="np-custom-row" style="display:none;">
+            <div class="option-row">
+              <label>Width (mm)</label>
+              <input type="number" id="np-cw" class="input" min="10" max="2000" value="210"
+                style="max-width:90px;">
+            </div>
+            <div class="option-row">
+              <label>Height (mm)</label>
+              <input type="number" id="np-ch" class="input" min="10" max="2000" value="297"
+                style="max-width:90px;">
+            </div>
+          </div>
+
+          <div class="section-label" style="margin-top:14px;">Fit Mode</div>
+          <div class="option-row">
+            <label>Mode</label>
+            <select id="np-mode" class="input" style="max-width:220px;">
+              <option value="fit"    selected>Scale to fit (maintain aspect ratio)</option>
+              <option value="fill">Scale to fill (may crop edges)</option>
+              <option value="center">Center (no scaling, clip if oversized)</option>
+              <option value="stretch">Stretch to fill (may distort)</option>
+            </select>
+          </div>
+
+          <div class="option-row">
+            <label>Margin (mm)</label>
+            <input type="number" id="np-margin" class="input" min="0" max="50" value="0"
+              style="max-width:80px;">
+            <span class="status-text">inset from edge (fit mode only)</span>
+          </div>
+
+          <div class="action-bar">
+            <button class="btn btn-primary btn-lg" id="np-run" disabled
+              style="width:100%;justify-content:center;">
+              Normalise Pages
+            </button>
+          </div>
+        </div>
+
+      </div>
+    `;
+      let srcFile = null;
+      const nameEl = container.querySelector("#np-filename");
+      const infoEl = container.querySelector("#np-info");
+      const runBtn = container.querySelector("#np-run");
+      container.querySelector("#np-size").addEventListener("change", (e) => {
+        container.querySelector("#np-custom-row").style.display = e.target.value === "custom" ? "block" : "none";
+      });
+      async function loadFile(file) {
+        srcFile = file;
+        nameEl.textContent = file.name;
+        showProgress("Loading\u2026");
+        try {
+          const bytes = await readFile(file);
+          const doc = await load2(bytes).catch(async (err) => {
+            if (err.code !== "ENCRYPTED")
+              throw err;
+            hideProgress();
+            const pwd = await promptPassword(file.name);
+            if (!pwd)
+              throw Object.assign(new Error("Cancelled"), { name: "AbortError" });
+            showProgress("Decrypting\u2026");
+            return load2(bytes, pwd);
+          });
+          const n = doc.getPageCount();
+          const sizeMap = /* @__PURE__ */ new Map();
+          doc.getPages().forEach((p) => {
+            const { width, height } = p.getSize();
+            const k = `${Math.round(width)}x${Math.round(height)}`;
+            sizeMap.set(k, (sizeMap.get(k) || 0) + 1);
+          });
+          infoEl.textContent = `${n} pages \xB7 ${sizeMap.size} distinct size${sizeMap.size > 1 ? "s" : ""}`;
+          runBtn.disabled = false;
+        } catch (err) {
+          if (err.name !== "AbortError")
+            toast("Failed to load: " + err.message, "error");
+        } finally {
+          hideProgress();
+        }
+      }
+      const dropZone = container.querySelector("#np-drop");
+      const input = container.querySelector("#np-input");
+      dropZone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropZone.classList.add("drag-over");
+      });
+      dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag-over"));
+      dropZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropZone.classList.remove("drag-over");
+        const f = [...e.dataTransfer.files].find((f2) => f2.name.toLowerCase().endsWith(".pdf"));
+        if (f)
+          loadFile(f);
+      });
+      container.querySelector("#np-browse").addEventListener("click", () => input.click());
+      input.addEventListener("change", (e) => {
+        if (e.target.files[0]) {
+          loadFile(e.target.files[0]);
+          input.value = "";
+        }
+      });
+      runBtn.addEventListener("click", async () => {
+        if (!srcFile)
+          return;
+        showProgress("Loading PDF\u2026");
+        try {
+          const bytes = await readFile(srcFile);
+          let srcDoc;
+          try {
+            srcDoc = await load2(bytes);
+          } catch (err) {
+            if (err.code !== "ENCRYPTED")
+              throw err;
+            hideProgress();
+            const pwd = await promptPassword(srcFile.name);
+            if (!pwd)
+              return;
+            showProgress("Decrypting\u2026");
+            srcDoc = await load2(bytes, pwd);
+          }
+          const srcPages = srcDoc.getPages();
+          const total = srcPages.length;
+          const mode = container.querySelector("#np-mode").value;
+          const marginMm = parseFloat(container.querySelector("#np-margin").value) || 0;
+          const marginPt = marginMm * PT_PER_MM3;
+          const sizeKey = container.querySelector("#np-size").value;
+          let tgtW, tgtH;
+          if (sizeKey === "first") {
+            const s = srcPages[0].getSize();
+            [tgtW, tgtH] = [s.width, s.height];
+          } else if (sizeKey === "most") {
+            const sizeMap = /* @__PURE__ */ new Map();
+            srcPages.forEach((p) => {
+              const { width, height } = p.getSize();
+              const k = `${Math.round(width)}x${Math.round(height)}`;
+              sizeMap.set(k, { count: (sizeMap.get(k)?.count || 0) + 1, w: width, h: height });
+            });
+            const best = [...sizeMap.values()].sort((a, b) => b.count - a.count)[0];
+            [tgtW, tgtH] = [best.w, best.h];
+          } else if (sizeKey === "custom") {
+            tgtW = parseFloat(container.querySelector("#np-cw").value) * PT_PER_MM3;
+            tgtH = parseFloat(container.querySelector("#np-ch").value) * PT_PER_MM3;
+          } else {
+            ;
+            [tgtW, tgtH] = SIZES[sizeKey];
+          }
+          const outDoc = await PDFDocument.create();
+          for (let i = 0; i < total; i++) {
+            updateProgress2(`Processing page ${i + 1} of ${total}\u2026`);
+            const srcPage = srcPages[i];
+            const { width: sw, height: sh } = srcPage.getSize();
+            const embedded = await outDoc.embedPage(srcPage);
+            const outPage = outDoc.addPage([tgtW, tgtH]);
+            const availW = tgtW - 2 * marginPt;
+            const availH = tgtH - 2 * marginPt;
+            let drawW, drawH, drawX, drawY;
+            if (mode === "stretch") {
+              drawW = availW;
+              drawH = availH;
+              drawX = marginPt;
+              drawY = marginPt;
+            } else if (mode === "center") {
+              drawW = sw;
+              drawH = sh;
+              drawX = (tgtW - sw) / 2;
+              drawY = (tgtH - sh) / 2;
+            } else {
+              const scaleX = availW / sw;
+              const scaleY = availH / sh;
+              const s = mode === "fill" ? Math.max(scaleX, scaleY) : Math.min(scaleX, scaleY);
+              drawW = sw * s;
+              drawH = sh * s;
+              drawX = marginPt + (availW - drawW) / 2;
+              drawY = marginPt + (availH - drawH) / 2;
+            }
+            outPage.drawPage(embedded, { x: drawX, y: drawY, width: drawW, height: drawH });
+          }
+          const outBytes = await outDoc.save();
+          const outName = srcFile.name.replace(/\.pdf$/i, "_normalised.pdf");
+          await saveAs(outBytes, outName);
+          toast(`${total} pages normalised \u2192 ${outName}`, "success");
+        } catch (err) {
+          if (err.name !== "AbortError") {
+            console.error(err);
+            toast("Failed: " + err.message, "error");
+          }
+        } finally {
+          hideProgress();
+        }
+      });
+    }
+  });
+
+  // src/features/fill-forms.js
+  init_es2();
+  init_ui();
+  registerFeature({
+    id: "fill-forms",
+    name: "Fill Forms",
+    category: "Edit",
+    icon: "\u{1F4DD}",
+    description: "Fill PDF form fields (AcroForms) and flatten to a static PDF",
+    render(container) {
+      container.innerHTML = `
+      <div class="feature-header">
+        <h2>Fill Forms</h2>
+        <p class="feature-desc">
+          Detect interactive form fields, fill them in, then save a flat PDF with
+          the values baked into the page \u2014 no longer editable, readable in any viewer.
+        </p>
+      </div>
+
+      <div class="feature-split">
+
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">\u2460 Open PDF</span></div>
+          <div class="file-drop-zone" id="ff-drop">
+            <span>Drag a PDF here, or</span>
+            <button class="btn btn-sm" id="ff-browse">Browse</button>
+            <input type="file" id="ff-input" accept=".pdf" hidden>
+          </div>
+          <div id="ff-filename" class="file-name-display"></div>
+          <div id="ff-info" class="status-text" style="margin-top:4px;"></div>
+
+          <div class="option-row" style="margin-top:14px;">
+            <label>After saving</label>
+            <select id="ff-flatten" class="input" style="max-width:220px;">
+              <option value="yes" selected>Flatten (lock fields permanently)</option>
+              <option value="no">Keep fields interactive</option>
+            </select>
+          </div>
+          <span class="status-text" style="display:block;margin-top:4px;">
+            Flattening bakes values into the page and removes the form structure.
+            Use "keep interactive" if you want others to continue editing.
+          </span>
+        </div>
+
+        <div class="panel" style="display:flex;flex-direction:column;justify-content:flex-end;">
+          <div class="action-bar" style="margin-top:0;">
+            <button class="btn btn-primary btn-lg" id="ff-save" disabled
+              style="width:100%;justify-content:center;">
+              Save Filled PDF
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Form fields render here -->
+      <div id="ff-form-panel" style="display:none;">
+        <div class="panel" style="margin-top:0;">
+          <div class="panel-header">
+            <span class="panel-title">\u2461 Fill in Fields</span>
+            <span id="ff-field-count" class="status-text"></span>
+          </div>
+          <div id="ff-fields" style="display:flex;flex-direction:column;gap:14px;padding:4px 0;"></div>
+        </div>
+      </div>
+    `;
+      let srcFile = null;
+      let pdfDoc = null;
+      const nameEl = container.querySelector("#ff-filename");
+      const infoEl = container.querySelector("#ff-info");
+      const saveBtn = container.querySelector("#ff-save");
+      const formPanel = container.querySelector("#ff-form-panel");
+      const fieldsEl = container.querySelector("#ff-fields");
+      const fieldCount = container.querySelector("#ff-field-count");
+      async function loadFile(file) {
+        srcFile = file;
+        nameEl.textContent = file.name;
+        showProgress("Loading PDF\u2026");
+        try {
+          const bytes = await readFile(file);
+          try {
+            pdfDoc = await load2(bytes);
+          } catch (err) {
+            if (err.code !== "ENCRYPTED")
+              throw err;
+            hideProgress();
+            const pwd = await promptPassword(file.name);
+            if (!pwd)
+              return;
+            showProgress("Decrypting\u2026");
+            pdfDoc = await load2(bytes, pwd);
+          }
+          const form = pdfDoc.getForm();
+          const fields = form.getFields();
+          if (!fields.length) {
+            infoEl.textContent = "No interactive form fields found in this PDF.";
+            toast("No form fields detected.", "warning");
+            return;
+          }
+          infoEl.textContent = `${pdfDoc.getPageCount()} pages`;
+          fieldCount.textContent = `${fields.length} field${fields.length > 1 ? "s" : ""}`;
+          formPanel.style.display = "";
+          saveBtn.disabled = false;
+          fieldsEl.innerHTML = "";
+          for (const field of fields) {
+            const name = field.getName();
+            const wrap = document.createElement("div");
+            wrap.style.cssText = "display:flex;flex-direction:column;gap:4px;";
+            const label = document.createElement("label");
+            label.style.cssText = "font-size:13px;font-weight:500;color:var(--text);";
+            label.textContent = name;
+            wrap.appendChild(label);
+            if (field instanceof PDFTextField) {
+              const isMulti = field.isMultiline?.() ?? false;
+              const el = isMulti ? document.createElement("textarea") : document.createElement("input");
+              el.className = "input";
+              el.dataset.fieldName = name;
+              el.dataset.fieldType = "text";
+              if (!isMulti)
+                el.type = "text";
+              else
+                el.rows = 3;
+              try {
+                el.value = field.getText() || "";
+              } catch {
+              }
+              try {
+                if (field.isReadOnly?.()) {
+                  el.readOnly = true;
+                  el.style.opacity = ".6";
+                  label.textContent += " (read-only)";
+                }
+              } catch {
+              }
+              wrap.appendChild(el);
+            } else if (field instanceof PDFCheckBox) {
+              const row = document.createElement("div");
+              row.style.cssText = "display:flex;align-items:center;gap:8px;";
+              const el = document.createElement("input");
+              el.type = "checkbox";
+              el.style.width = "auto";
+              el.dataset.fieldName = name;
+              el.dataset.fieldType = "checkbox";
+              try {
+                el.checked = field.isChecked();
+              } catch {
+              }
+              const lbl = document.createElement("span");
+              lbl.style.cssText = "font-size:13px;color:var(--text-muted);";
+              lbl.textContent = el.checked ? "Checked" : "Unchecked";
+              el.addEventListener("change", () => {
+                lbl.textContent = el.checked ? "Checked" : "Unchecked";
+              });
+              row.appendChild(el);
+              row.appendChild(lbl);
+              wrap.appendChild(row);
+            } else if (field instanceof PDFRadioGroup) {
+              let options = [];
+              try {
+                options = field.getOptions();
+              } catch {
+              }
+              let selected = null;
+              try {
+                selected = field.getSelected();
+              } catch {
+              }
+              const radioWrap = document.createElement("div");
+              radioWrap.style.cssText = "display:flex;flex-direction:column;gap:6px;";
+              radioWrap.dataset.fieldName = name;
+              radioWrap.dataset.fieldType = "radio";
+              for (const opt of options) {
+                const row = document.createElement("label");
+                row.style.cssText = "display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;";
+                const radio = document.createElement("input");
+                radio.type = "radio";
+                radio.name = `ff-radio-${name}`;
+                radio.value = opt;
+                radio.style.width = "auto";
+                if (opt === selected)
+                  radio.checked = true;
+                const txt = document.createElement("span");
+                txt.textContent = opt;
+                row.appendChild(radio);
+                row.appendChild(txt);
+                radioWrap.appendChild(row);
+              }
+              wrap.appendChild(radioWrap);
+            } else if (field instanceof PDFDropdown) {
+              const el = document.createElement("select");
+              el.className = "input";
+              el.dataset.fieldName = name;
+              el.dataset.fieldType = "dropdown";
+              let options = [];
+              try {
+                options = field.getOptions();
+              } catch {
+              }
+              let selected = null;
+              try {
+                selected = field.getSelected()?.[0];
+              } catch {
+              }
+              for (const opt of options) {
+                const o = document.createElement("option");
+                o.value = opt;
+                o.textContent = opt;
+                if (opt === selected)
+                  o.selected = true;
+                el.appendChild(o);
+              }
+              wrap.appendChild(el);
+            } else if (field instanceof PDFOptionList) {
+              const el = document.createElement("select");
+              el.className = "input";
+              el.multiple = true;
+              el.size = Math.min(5, 3);
+              el.dataset.fieldName = name;
+              el.dataset.fieldType = "optionlist";
+              let options = [];
+              let selected = [];
+              try {
+                options = field.getOptions();
+              } catch {
+              }
+              try {
+                selected = field.getSelected() ?? [];
+              } catch {
+              }
+              for (const opt of options) {
+                const o = document.createElement("option");
+                o.value = opt;
+                o.textContent = opt;
+                if (selected.includes(opt))
+                  o.selected = true;
+                el.appendChild(o);
+              }
+              wrap.appendChild(el);
+            } else {
+              const note = document.createElement("span");
+              note.style.cssText = "font-size:12px;color:var(--text-subtle);font-style:italic;";
+              if (field instanceof PDFButton) {
+                note.textContent = "(Push button \u2014 not fillable)";
+              } else {
+                note.textContent = "(Signature field \u2014 not fillable here)";
+              }
+              wrap.appendChild(note);
+            }
+            fieldsEl.appendChild(wrap);
+          }
+        } catch (err) {
+          if (err.name !== "AbortError")
+            toast("Failed to load: " + err.message, "error");
+        } finally {
+          hideProgress();
+        }
+      }
+      const dropZone = container.querySelector("#ff-drop");
+      const input = container.querySelector("#ff-input");
+      dropZone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropZone.classList.add("drag-over");
+      });
+      dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag-over"));
+      dropZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropZone.classList.remove("drag-over");
+        const f = [...e.dataTransfer.files].find((f2) => f2.name.toLowerCase().endsWith(".pdf"));
+        if (f)
+          loadFile(f);
+      });
+      container.querySelector("#ff-browse").addEventListener("click", () => input.click());
+      input.addEventListener("change", (e) => {
+        if (e.target.files[0]) {
+          loadFile(e.target.files[0]);
+          input.value = "";
+        }
+      });
+      saveBtn.addEventListener("click", async () => {
+        if (!pdfDoc)
+          return;
+        showProgress("Applying values\u2026");
+        try {
+          const form = pdfDoc.getForm();
+          let filled = 0;
+          fieldsEl.querySelectorAll("[data-field-name]").forEach((el) => {
+            const name = el.dataset.fieldName;
+            const type = el.dataset.fieldType;
+            try {
+              if (type === "text") {
+                form.getTextField(name).setText(el.value);
+                filled++;
+              } else if (type === "checkbox") {
+                el.checked ? form.getCheckBox(name).check() : form.getCheckBox(name).uncheck();
+                filled++;
+              } else if (type === "radio") {
+                const checked = el.querySelector('input[type="radio"]:checked');
+                if (checked) {
+                  form.getRadioGroup(name).select(checked.value);
+                  filled++;
+                }
+              } else if (type === "dropdown") {
+                form.getDropdown(name).select(el.value);
+                filled++;
+              } else if (type === "optionlist") {
+                const vals = [...el.selectedOptions].map((o) => o.value);
+                if (vals.length) {
+                  form.getOptionList(name).select(vals);
+                  filled++;
+                }
+              }
+            } catch (e) {
+              console.warn(`fill-forms: could not set field "${name}":`, e);
+            }
+          });
+          if (container.querySelector("#ff-flatten").value === "yes") {
+            updateProgress("Flattening\u2026");
+            try {
+              form.flatten();
+            } catch (e) {
+              console.warn("flatten partial:", e);
+            }
+          }
+          const outBytes = await save2(pdfDoc);
+          const outName = srcFile.name.replace(/\.pdf$/i, "_filled.pdf");
+          await saveAs(outBytes, outName);
+          toast(`${filled} field${filled !== 1 ? "s" : ""} saved \u2192 ${outName}`, "success");
+        } catch (err) {
+          if (err.name !== "AbortError") {
+            console.error(err);
+            toast("Failed: " + err.message, "error");
+          }
+        } finally {
+          hideProgress();
+        }
+      });
+    }
+  });
+
+  // src/features/poster.js
+  init_es2();
+  init_ui();
+  var PT_PER_MM4 = 72 / 25.4;
+  var SHEET_SIZES2 = {
+    "a4": [595.28, 841.89],
+    "letter": [612, 792],
+    "a3": [841.89, 1190.55],
+    "a5": [419.53, 595.28]
+  };
+  registerFeature({
+    id: "poster",
+    name: "Poster / Tile Print",
+    category: "Edit",
+    icon: "\u{1F5FA}",
+    description: "Split a large page across multiple sheets for assembly",
+    render(container) {
+      container.innerHTML = `
+      <div class="feature-header">
+        <h2>Poster / Tile Print</h2>
+        <p class="feature-desc">
+          Split a large PDF page (poster, floor plan, map) across multiple A4 or Letter
+          sheets so you can print and assemble them. Content quality is vector \u2014 no
+          rasterisation.
+        </p>
+      </div>
+
+      <div class="feature-split">
+
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">\u2460 Source PDF</span></div>
+          <div class="file-drop-zone" id="pt-drop">
+            <span>Drag a PDF here, or</span>
+            <button class="btn btn-sm" id="pt-browse">Browse</button>
+            <input type="file" id="pt-input" accept=".pdf" hidden>
+          </div>
+          <div id="pt-filename" class="file-name-display"></div>
+          <div id="pt-info" class="status-text" style="margin-top:4px;"></div>
+
+          <div class="section-label" style="margin-top:14px;">Page to tile</div>
+          <div class="option-row">
+            <label>Page number</label>
+            <input type="number" id="pt-page" class="input" min="1" value="1"
+              style="max-width:90px;">
+            <span id="pt-page-hint" class="status-text"></span>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">\u2461 Tiling Options</span></div>
+
+          <div class="option-row">
+            <label>Output sheet</label>
+            <select id="pt-sheet" class="input" style="max-width:200px;">
+              <option value="a4"     selected>A4 Portrait</option>
+              <option value="a4l">A4 Landscape</option>
+              <option value="letter">Letter Portrait</option>
+              <option value="letterl">Letter Landscape</option>
+              <option value="a3">A3 Portrait</option>
+            </select>
+          </div>
+
+          <div class="option-row">
+            <label>Grid</label>
+            <select id="pt-grid" class="input" style="max-width:200px;">
+              <option value="2x1">2 \xD7 1  (2 sheets wide, 1 tall)</option>
+              <option value="1x2">1 \xD7 2  (1 wide, 2 tall)</option>
+              <option value="2x2" selected>2 \xD7 2  (4 sheets)</option>
+              <option value="3x2">3 \xD7 2  (6 sheets)</option>
+              <option value="2x3">2 \xD7 3  (6 sheets)</option>
+              <option value="3x3">3 \xD7 3  (9 sheets)</option>
+              <option value="4x3">4 \xD7 3  (12 sheets)</option>
+              <option value="4x4">4 \xD7 4  (16 sheets)</option>
+            </select>
+          </div>
+
+          <div class="option-row">
+            <label>Overlap (mm)</label>
+            <input type="number" id="pt-overlap" class="input" min="0" max="30" value="5"
+              style="max-width:80px;">
+            <span class="status-text">shared content at edges for alignment</span>
+          </div>
+
+          <div class="option-row">
+            <label>Margin (mm)</label>
+            <input type="number" id="pt-margin" class="input" min="0" max="30" value="10"
+              style="max-width:80px;">
+            <span class="status-text">printable area inset</span>
+          </div>
+
+          <div class="option-row">
+            <label>Tile labels</label>
+            <input type="checkbox" id="pt-labels" checked style="width:auto;">
+            <span class="status-text" style="margin-left:4px;">Print "A1", "A2"\u2026 in corner of each sheet</span>
+          </div>
+
+          <div class="option-row">
+            <label>Crop marks</label>
+            <input type="checkbox" id="pt-marks" checked style="width:auto;">
+            <span class="status-text" style="margin-left:4px;">Corner marks to guide cutting and alignment</span>
+          </div>
+
+          <div id="pt-preview-info" class="status-text"
+            style="margin-top:8px;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);display:none;">
+          </div>
+
+          <div class="action-bar">
+            <button class="btn btn-primary btn-lg" id="pt-run" disabled
+              style="width:100%;justify-content:center;">
+              Create Tiled PDF
+            </button>
+          </div>
+        </div>
+
+      </div>
+    `;
+      let srcFile = null;
+      const nameEl = container.querySelector("#pt-filename");
+      const infoEl = container.querySelector("#pt-info");
+      const runBtn = container.querySelector("#pt-run");
+      const pageHint = container.querySelector("#pt-page-hint");
+      const previewInfo = container.querySelector("#pt-preview-info");
+      function updatePreview() {
+        if (!srcFile)
+          return;
+        const [cols, rows] = container.querySelector("#pt-grid").value.split("x").map(Number);
+        const sheetKey = container.querySelector("#pt-sheet").value;
+        const [sw, sh] = SHEET_SIZES2[sheetKey] || SHEET_SIZES2["a4"];
+        const overlapPt = parseFloat(container.querySelector("#pt-overlap").value || 0) * PT_PER_MM4;
+        const marginPt = parseFloat(container.querySelector("#pt-margin").value || 0) * PT_PER_MM4;
+        const tileStepW = sw - marginPt * 2 - overlapPt;
+        const tileStepH = sh - marginPt * 2 - overlapPt;
+        const totalW = tileStepW * cols + overlapPt;
+        const totalH = tileStepH * rows + overlapPt;
+        const wMm = (totalW / PT_PER_MM4).toFixed(0);
+        const hMm = (totalH / PT_PER_MM4).toFixed(0);
+        previewInfo.style.display = "";
+        previewInfo.textContent = `${cols * rows} sheets \xB7 assembled size \u2248 ${wMm} \xD7 ${hMm} mm`;
+      }
+      ;
+      ["#pt-grid", "#pt-sheet", "#pt-overlap", "#pt-margin"].forEach((id) => {
+        container.querySelector(id).addEventListener("change", updatePreview);
+        container.querySelector(id).addEventListener("input", updatePreview);
+      });
+      async function loadFile(file) {
+        srcFile = file;
+        nameEl.textContent = file.name;
+        showProgress("Loading\u2026");
+        try {
+          const bytes = await readFile(file);
+          const doc = await load2(bytes).catch(async (err) => {
+            if (err.code !== "ENCRYPTED")
+              throw err;
+            hideProgress();
+            const pwd = await promptPassword(file.name);
+            if (!pwd)
+              throw Object.assign(new Error("Cancelled"), { name: "AbortError" });
+            showProgress("Decrypting\u2026");
+            return load2(bytes, pwd);
+          });
+          const n = doc.getPageCount();
+          infoEl.textContent = `${n} page${n > 1 ? "s" : ""}`;
+          container.querySelector("#pt-page").max = n;
+          pageHint.textContent = `of ${n}`;
+          runBtn.disabled = false;
+          updatePreview();
+        } catch (err) {
+          if (err.name !== "AbortError")
+            toast("Failed to load: " + err.message, "error");
+        } finally {
+          hideProgress();
+        }
+      }
+      const dropZone = container.querySelector("#pt-drop");
+      const input = container.querySelector("#pt-input");
+      dropZone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropZone.classList.add("drag-over");
+      });
+      dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag-over"));
+      dropZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropZone.classList.remove("drag-over");
+        const f = [...e.dataTransfer.files].find((f2) => f2.name.toLowerCase().endsWith(".pdf"));
+        if (f)
+          loadFile(f);
+      });
+      container.querySelector("#pt-browse").addEventListener("click", () => input.click());
+      input.addEventListener("change", (e) => {
+        if (e.target.files[0]) {
+          loadFile(e.target.files[0]);
+          input.value = "";
+        }
+      });
+      runBtn.addEventListener("click", async () => {
+        if (!srcFile)
+          return;
+        showProgress("Loading PDF\u2026");
+        try {
+          const bytes = await readFile(srcFile);
+          let srcDoc;
+          try {
+            srcDoc = await load2(bytes);
+          } catch (err) {
+            if (err.code !== "ENCRYPTED")
+              throw err;
+            hideProgress();
+            const pwd = await promptPassword(srcFile.name);
+            if (!pwd)
+              return;
+            showProgress("Decrypting\u2026");
+            srcDoc = await load2(bytes, pwd);
+          }
+          const total = srcDoc.getPageCount();
+          const pNum = Math.max(1, Math.min(total, parseInt(container.querySelector("#pt-page").value) || 1));
+          const srcPage = srcDoc.getPage(pNum - 1);
+          const { width: srcW, height: srcH } = srcPage.getSize();
+          const [cols, rows] = container.querySelector("#pt-grid").value.split("x").map(Number);
+          const sheetKey = container.querySelector("#pt-sheet").value;
+          const [sheetW, sheetH] = sheetKey.endsWith("l") ? SHEET_SIZES2[sheetKey.slice(0, -1)].slice().reverse() : SHEET_SIZES2[sheetKey] || SHEET_SIZES2["a4"];
+          const overlapPt = parseFloat(container.querySelector("#pt-overlap").value || 0) * PT_PER_MM4;
+          const marginPt = parseFloat(container.querySelector("#pt-margin").value || 0) * PT_PER_MM4;
+          const showLabels = container.querySelector("#pt-labels").checked;
+          const showMarks = container.querySelector("#pt-marks").checked;
+          const contentW = sheetW - 2 * marginPt;
+          const contentH = sheetH - 2 * marginPt;
+          const stepW = contentW - overlapPt;
+          const stepH = contentH - overlapPt;
+          const totalCovW = stepW * cols + overlapPt;
+          const totalCovH = stepH * rows + overlapPt;
+          const scaleX = totalCovW / srcW;
+          const scaleY = totalCovH / srcH;
+          const scale2 = Math.min(scaleX, scaleY);
+          const scaledW = srcW * scale2;
+          const scaledH = srcH * scale2;
+          const offX = (totalCovW - scaledW) / 2;
+          const offY = (totalCovH - scaledH) / 2;
+          updateProgress2("Embedding source page\u2026");
+          const outDoc = await PDFDocument.create();
+          const embedded = await outDoc.embedPage(srcPage);
+          const font = showLabels ? await outDoc.embedFont(StandardFonts.HelveticaBold) : null;
+          const GREY = rgb(0.6, 0.6, 0.6);
+          const COL_LABELS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+          const numSheets = cols * rows;
+          for (let row = 0; row < rows; row++) {
+            for (let col = 0; col < cols; col++) {
+              updateProgress2(`Building sheet ${row * cols + col + 1} of ${numSheets}\u2026`);
+              const sheet = outDoc.addPage([sheetW, sheetH]);
+              const drawX = marginPt - col * stepW + offX;
+              const drawY = marginPt - (rows - 1 - row) * stepH + offY;
+              sheet.drawPage(embedded, { x: drawX, y: drawY, width: scaledW, height: scaledH });
+              if (showMarks) {
+                const mk = 8;
+                const gl = 4;
+                const corners = [
+                  [marginPt, marginPt],
+                  [sheetW - marginPt, marginPt],
+                  [marginPt, sheetH - marginPt],
+                  [sheetW - marginPt, sheetH - marginPt]
+                ];
+                for (const [cx2, cy2] of corners) {
+                  const dx = cx2 < sheetW / 2 ? -1 : 1;
+                  const dy = cy2 < sheetH / 2 ? -1 : 1;
+                  sheet.drawLine({ start: { x: cx2 + dx * gl, y: cy2 }, end: { x: cx2 + dx * (gl + mk), y: cy2 }, thickness: 0.5, color: GREY });
+                  sheet.drawLine({ start: { x: cx2, y: cy2 + dy * gl }, end: { x: cx2, y: cy2 + dy * (gl + mk) }, thickness: 0.5, color: GREY });
+                }
+              }
+              if (showLabels && font) {
+                const label = `${COL_LABELS[col] || col + 1}${row + 1}`;
+                sheet.drawText(label, {
+                  x: 6,
+                  y: sheetH - 16,
+                  size: 10,
+                  font,
+                  color: GREY
+                });
+              }
+            }
+          }
+          const outBytes = await outDoc.save();
+          const outName = srcFile.name.replace(/\.pdf$/i, `_poster_${cols}x${rows}.pdf`);
+          await saveAs(outBytes, outName);
+          toast(
+            `${numSheets} sheet${numSheets > 1 ? "s" : ""} created \u2192 ${outName}`,
+            "success"
+          );
+        } catch (err) {
+          if (err.name !== "AbortError") {
+            console.error(err);
+            toast("Failed: " + err.message, "error");
+          }
+        } finally {
+          hideProgress();
+        }
+      });
+    }
+  });
+
+  // src/features/batch.js
+  init_ui();
+  var OPERATIONS = {
+    compress: {
+      label: "Compress (reduce file size)",
+      settings: `
+      <div class="option-row">
+        <label>Quality</label>
+        <select id="bt-q-preset" class="input" style="max-width:220px;">
+          <option value="screen">Screen / Email (~72 dpi)</option>
+          <option value="office" selected>Office (~120 dpi)</option>
+          <option value="print">Print (~150 dpi)</option>
+        </select>
+      </div>`
+    },
+    flatten: {
+      label: "Flatten to Images (strip all invisible layers)",
+      settings: `
+      <div class="option-row">
+        <label>Resolution</label>
+        <select id="bt-fl-scale" class="input" style="max-width:220px;">
+          <option value="1.39">100 dpi \u2014 smallest</option>
+          <option value="2.08" selected>150 dpi \u2014 office</option>
+          <option value="2.78">200 dpi \u2014 high quality</option>
+        </select>
+      </div>
+      <div class="option-row">
+        <label>JPEG quality <span id="bt-fl-qval">88%</span></label>
+        <input type="range" id="bt-fl-quality" min="50" max="100" value="88" style="flex:1;">
+      </div>`
+    },
+    unlock: {
+      label: "Unlock (remove all protection)",
+      settings: `
+      <p class="status-text" style="margin:0;">
+        Removes owner-password restrictions. If files have a user password
+        they will be skipped (cannot batch-decrypt without a known password).
+      </p>`
+    },
+    rotate: {
+      label: "Rotate all pages",
+      settings: `
+      <div class="option-row">
+        <label>Angle</label>
+        <select id="bt-rot-angle" class="input" style="max-width:180px;">
+          <option value="90">90\xB0 Clockwise</option>
+          <option value="270">90\xB0 Counter-clockwise</option>
+          <option value="180">180\xB0</option>
+        </select>
+      </div>`
+    },
+    watermark: {
+      label: "Add Text Watermark",
+      settings: `
+      <div class="option-row">
+        <label>Text</label>
+        <input type="text" id="bt-wm-text" class="input" value="CONFIDENTIAL">
+      </div>
+      <div class="option-row">
+        <label>Position</label>
+        <select id="bt-wm-pos" class="input" style="max-width:180px;">
+          <option value="diagonal" selected>Diagonal</option>
+          <option value="center">Center</option>
+          <option value="top">Top</option>
+          <option value="bottom">Bottom</option>
+        </select>
+      </div>
+      <div class="option-row">
+        <label>Opacity <span id="bt-wm-opval">15%</span></label>
+        <input type="range" id="bt-wm-opacity" min="5" max="60" value="15" style="flex:1;">
+      </div>`
+    },
+    pagenumbers: {
+      label: "Add Page Numbers",
+      settings: `
+      <div class="option-row">
+        <label>Format</label>
+        <input type="text" id="bt-pn-fmt" class="input" value="{n}" style="max-width:160px;">
+        <span class="status-text">{n} = page \xB7 {total} = count</span>
+      </div>
+      <div class="option-row">
+        <label>Position</label>
+        <select id="bt-pn-pos" class="input" style="max-width:200px;">
+          <option value="bottom-center" selected>Bottom center</option>
+          <option value="bottom-right">Bottom right</option>
+          <option value="bottom-left">Bottom left</option>
+          <option value="top-center">Top center</option>
+          <option value="top-right">Top right</option>
+          <option value="top-left">Top left</option>
+        </select>
+      </div>`
+    }
+  };
+  var COMPRESS_PRESETS = {
+    screen: { scale: 1, quality: 0.72 },
+    office: { scale: 1.67, quality: 0.82 },
+    print: { scale: 2.08, quality: 0.88 }
+  };
+  registerFeature({
+    id: "batch",
+    name: "Batch Process",
+    category: "Edit",
+    icon: "\u26A1",
+    description: "Apply one operation to many PDF files at once",
+    render(container) {
+      container.innerHTML = `
+      <div class="feature-header">
+        <h2>Batch Process</h2>
+        <p class="feature-desc">
+          Apply one operation to many PDFs at once. Drop multiple files below,
+          choose what to do, and pick an output folder.
+        </p>
+      </div>
+
+      <div class="feature-split">
+
+        <!-- \u2500\u2500 Files \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 -->
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">\u2460 PDF Files</span>
+            <span id="bt-file-count" class="status-text"></span>
+          </div>
+          <div class="file-drop-zone" id="bt-drop" style="min-height:80px;">
+            <span>Drag multiple PDFs here, or</span>
+            <button class="btn btn-sm" id="bt-browse">Browse</button>
+            <input type="file" id="bt-input" accept=".pdf" multiple hidden>
+          </div>
+          <div id="bt-file-list"
+            style="max-height:220px;overflow-y:auto;margin-top:8px;display:flex;flex-direction:column;gap:4px;">
+          </div>
+          <div style="display:flex;gap:8px;margin-top:8px;">
+            <button class="btn btn-sm" id="bt-clear-files" style="display:none;">Clear all</button>
+          </div>
+        </div>
+
+        <!-- \u2500\u2500 Operation \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 -->
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">\u2461 Operation</span></div>
+
+          <div class="option-row">
+            <label>Do this</label>
+            <select id="bt-op" class="input" style="max-width:280px;">
+              ${Object.entries(OPERATIONS).map(
+        ([k, v]) => `<option value="${k}">${v.label}</option>`
+      ).join("")}
+            </select>
+          </div>
+
+          <div id="bt-op-settings" style="margin-top:12px;display:flex;flex-direction:column;gap:10px;">
+          </div>
+
+          <div class="section-label" style="margin-top:14px;">Output</div>
+          <div class="option-row">
+            <label>Suffix</label>
+            <input type="text" id="bt-suffix" class="input" value="_batch"
+              style="max-width:140px;">
+            <span class="status-text">appended before .pdf</span>
+          </div>
+
+          <div class="action-bar" style="margin-top:20px;">
+            <button class="btn btn-primary btn-lg" id="bt-run" disabled
+              style="width:100%;justify-content:center;">
+              Process &amp; Save to Folder\u2026
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- \u2500\u2500 Progress log \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 -->
+      <div id="bt-log-panel" class="panel" style="display:none;margin-top:0;">
+        <div class="panel-header">
+          <span class="panel-title">Progress</span>
+          <span id="bt-log-summary" class="status-text"></span>
+        </div>
+        <div id="bt-log"
+          style="max-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;font-size:12px;font-family:monospace;">
+        </div>
+      </div>
+    `;
+      let files = [];
+      const fileCountEl = container.querySelector("#bt-file-count");
+      const fileListEl = container.querySelector("#bt-file-list");
+      const clearBtn = container.querySelector("#bt-clear-files");
+      const runBtn = container.querySelector("#bt-run");
+      const logPanel = container.querySelector("#bt-log-panel");
+      const logEl = container.querySelector("#bt-log");
+      const logSummary = container.querySelector("#bt-log-summary");
+      function addFiles(newFiles) {
+        const existing = new Set(files.map((f) => f.name));
+        for (const f of newFiles) {
+          if (f.name.toLowerCase().endsWith(".pdf") && !existing.has(f.name)) {
+            files.push(f);
+            existing.add(f.name);
+          }
+        }
+        renderFileList();
+      }
+      function renderFileList() {
+        fileListEl.innerHTML = "";
+        for (let i = 0; i < files.length; i++) {
+          const row = document.createElement("div");
+          row.style.cssText = "display:flex;align-items:center;gap:6px;padding:4px 6px;background:var(--bg);border:1px solid var(--border);border-radius:4px;";
+          row.innerHTML = `
+          <span style="flex:1;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
+            title="${files[i].name}">${files[i].name}</span>
+          <span style="font-size:11px;color:var(--text-subtle);white-space:nowrap;">${(files[i].size / 1024).toFixed(0)} KB</span>
+          <button data-idx="${i}" style="background:none;border:none;cursor:pointer;color:var(--text-subtle);font-size:14px;padding:0 2px;"
+            title="Remove">\xD7</button>
+        `;
+          fileListEl.appendChild(row);
+        }
+        fileListEl.querySelectorAll("button[data-idx]").forEach((btn) => {
+          btn.addEventListener("click", (e) => {
+            files.splice(parseInt(btn.dataset.idx), 1);
+            renderFileList();
+          });
+        });
+        const n = files.length;
+        fileCountEl.textContent = n ? `${n} file${n > 1 ? "s" : ""}` : "";
+        clearBtn.style.display = n ? "" : "none";
+        runBtn.disabled = n === 0;
+      }
+      clearBtn.addEventListener("click", () => {
+        files = [];
+        renderFileList();
+      });
+      const dropZone = container.querySelector("#bt-drop");
+      const input = container.querySelector("#bt-input");
+      dropZone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropZone.classList.add("drag-over");
+      });
+      dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag-over"));
+      dropZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropZone.classList.remove("drag-over");
+        addFiles([...e.dataTransfer.files]);
+      });
+      container.querySelector("#bt-browse").addEventListener("click", () => input.click());
+      input.addEventListener("change", (e) => {
+        addFiles([...e.target.files]);
+        input.value = "";
+      });
+      const opSelect = container.querySelector("#bt-op");
+      const opSettings = container.querySelector("#bt-op-settings");
+      function renderOpSettings() {
+        opSettings.innerHTML = OPERATIONS[opSelect.value].settings || "";
+        const flQ = opSettings.querySelector("#bt-fl-quality");
+        const flV = opSettings.querySelector("#bt-fl-qval");
+        if (flQ && flV)
+          flQ.addEventListener("input", () => {
+            flV.textContent = flQ.value + "%";
+          });
+        const wmO = opSettings.querySelector("#bt-wm-opacity");
+        const wmV = opSettings.querySelector("#bt-wm-opval");
+        if (wmO && wmV)
+          wmO.addEventListener("input", () => {
+            wmV.textContent = wmO.value + "%";
+          });
+      }
+      opSelect.addEventListener("change", renderOpSettings);
+      renderOpSettings();
+      function logLine(text, type = "info") {
+        const el = document.createElement("div");
+        el.style.color = type === "ok" ? "var(--green)" : type === "error" ? "#ef4444" : type === "warn" ? "var(--amber)" : "var(--text-muted)";
+        el.textContent = text;
+        logEl.appendChild(el);
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+      runBtn.addEventListener("click", async () => {
+        if (!files.length)
+          return;
+        let destDir;
+        try {
+          destDir = await window.showDirectoryPicker({ mode: "readwrite" });
+        } catch {
+          return;
+        }
+        const op = opSelect.value;
+        const suffix = container.querySelector("#bt-suffix").value.trim() || "_batch";
+        logEl.innerHTML = "";
+        logPanel.style.display = "";
+        logSummary.textContent = "";
+        runBtn.disabled = true;
+        let ok = 0, failed = 0;
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          updateProgress2(`Processing ${i + 1}/${files.length}: ${file.name}`);
+          logLine(`\u25B6 ${file.name}`);
+          try {
+            const bytes = await readFile(file);
+            const outBytes = await processFile(op, bytes, file.name);
+            if (!outBytes) {
+              logLine(`  \u26A0 Skipped (encrypted with user password)`, "warn");
+              failed++;
+              continue;
+            }
+            const outName = file.name.replace(/\.pdf$/i, `${suffix}.pdf`);
+            const fh = await destDir.getFileHandle(outName, { create: true });
+            const wr = await fh.createWritable();
+            await wr.write(outBytes);
+            await wr.close();
+            const kb = (outBytes.byteLength / 1024).toFixed(0);
+            logLine(`  \u2713 ${outName}  (${kb} KB)`, "ok");
+            ok++;
+          } catch (err) {
+            logLine(`  \u2717 ${err.message}`, "error");
+            console.error(file.name, err);
+            failed++;
+          }
+        }
+        hideProgress();
+        runBtn.disabled = false;
+        logSummary.textContent = `${ok} succeeded \xB7 ${failed} failed`;
+        const msg = `Batch done: ${ok}/${files.length} files \u2192 "${destDir.name}"`;
+        toast(msg, ok === files.length ? "success" : "warning", 5e3);
+      });
+      async function processFile(op, bytes, name) {
+        if (op === "compress") {
+          const preset = COMPRESS_PRESETS[opSettings.querySelector("#bt-q-preset")?.value || "office"];
+          let rDoc;
+          try {
+            rDoc = await loadForRender(bytes);
+          } catch (err) {
+            if (err.code === "ENCRYPTED")
+              return null;
+            throw err;
+          }
+          const out = await renderToUnencryptedPdf(rDoc, { scale: preset.scale, quality: preset.quality });
+          rDoc.destroy();
+          return out;
+        }
+        if (op === "flatten") {
+          const scale2 = parseFloat(opSettings.querySelector("#bt-fl-scale")?.value || 2.08);
+          const quality = parseInt(opSettings.querySelector("#bt-fl-quality")?.value || 88) / 100;
+          let rDoc;
+          try {
+            rDoc = await loadForRender(bytes);
+          } catch (err) {
+            if (err.code === "ENCRYPTED")
+              return null;
+            throw err;
+          }
+          const out = await renderToUnencryptedPdf(rDoc, { scale: scale2, quality });
+          rDoc.destroy();
+          return out;
+        }
+        if (op === "unlock") {
+          let doc;
+          try {
+            doc = await load2(bytes);
+          } catch (err) {
+            if (err.code === "ENCRYPTED")
+              return null;
+            throw err;
+          }
+          return save2(doc);
+        }
+        if (op === "rotate") {
+          const angle = parseInt(opSettings.querySelector("#bt-rot-angle")?.value || 90);
+          let doc;
+          try {
+            doc = await load2(bytes);
+          } catch (err) {
+            if (err.code === "ENCRYPTED")
+              return null;
+            throw err;
+          }
+          rotatePages(doc, doc.getPageIndices(), angle);
+          return save2(doc);
+        }
+        if (op === "watermark") {
+          const text = opSettings.querySelector("#bt-wm-text")?.value || "DRAFT";
+          const pos = opSettings.querySelector("#bt-wm-pos")?.value || "diagonal";
+          const opacity = parseInt(opSettings.querySelector("#bt-wm-opacity")?.value || 15) / 100;
+          let doc;
+          try {
+            doc = await load2(bytes);
+          } catch (err) {
+            if (err.code === "ENCRYPTED")
+              return null;
+            throw err;
+          }
+          await addTextWatermark(doc, text, { opacity, position: pos });
+          return save2(doc);
+        }
+        if (op === "pagenumbers") {
+          const format = opSettings.querySelector("#bt-pn-fmt")?.value || "{n}";
+          const position = opSettings.querySelector("#bt-pn-pos")?.value || "bottom-center";
+          let doc;
+          try {
+            doc = await load2(bytes);
+          } catch (err) {
+            if (err.code === "ENCRYPTED")
+              return null;
+            throw err;
+          }
+          await addPageNumbers(doc, { format, position });
+          return save2(doc);
+        }
+        throw new Error(`Unknown operation: ${op}`);
+      }
     }
   });
 
@@ -72283,7 +74061,7 @@ ${trimmed}`);
     try {
       showProgress("Opening folder\u2026");
       const handle = await pickWorkspace();
-      updateProgress("Scanning for PDFs\u2026");
+      updateProgress2("Scanning for PDFs\u2026");
       const files = await scanForPDFs(handle);
       update({ scannedFiles: files });
       toast(`Found ${files.length} PDF${files.length !== 1 ? "s" : ""} in "${handle.name}"`, "success");
@@ -72341,7 +74119,7 @@ ${trimmed}`);
   }
   function stampVersion() {
     document.querySelectorAll(".sidebar-version").forEach((el) => {
-      if (el.textContent.includes("2.0.0"))
+      if (el.textContent.includes("2.1.0"))
         el.textContent = "dev";
     });
   }
