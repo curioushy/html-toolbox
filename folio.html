@@ -1018,7 +1018,7 @@ small { font-size: 12px; color: var(--text-muted); }
     <aside class="sidebar">
       <div class="sidebar-header">
         <span class="sidebar-logo">Folio</span>
-        <span class="sidebar-version">v1.0.0</span>
+        <span class="sidebar-version">v1.5.0</span>
       </div>
       <nav id="feature-nav" class="feature-nav"></nav>
       <div class="sidebar-footer">
@@ -66633,6 +66633,148 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
     }
   });
 
+  // src/features/unlock.js
+  init_ui();
+  registerFeature({
+    id: "unlock",
+    name: "Unlock",
+    category: "Security",
+    icon: "\u{1F513}",
+    description: "Remove printing/copying restrictions from a PDF",
+    render(container) {
+      container.innerHTML = `
+      <div class="feature-header">
+        <h2>Unlock PDF</h2>
+        <p class="feature-desc">
+          Remove "no printing", "no copying", "no modifying" and other owner-password
+          restrictions. Produces a clean, unrestricted copy you can print or edit
+          normally in any PDF viewer.
+        </p>
+      </div>
+
+      <div class="panel">
+
+        <div class="section-label">Select PDF</div>
+        <div class="file-drop-zone" id="unlock-drop">
+          Drag a PDF here, or
+          <button class="btn btn-sm" id="unlock-browse">Browse</button>
+          <input type="file" id="unlock-input" accept=".pdf" hidden>
+        </div>
+        <div id="unlock-filename" class="file-name-display"></div>
+
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;margin:14px 0;font-size:13px;color:var(--text-muted);line-height:1.6;">
+          <strong style="color:var(--text);">What this does</strong><br>
+          Re-saves the PDF without its permission flags. The output has the same
+          pages, text, images and bookmarks \u2014 just no "locked" behavior in Acrobat
+          or browser viewers.
+          <br><br>
+          <strong style="color:var(--text);">If the PDF has a user password</strong><br>
+          You'll be asked to enter it. Only PDFs you have the right to open.
+        </div>
+
+        <div class="action-bar">
+          <button class="btn btn-primary btn-lg" id="unlock-run" disabled>Unlock PDF</button>
+        </div>
+
+      </div>
+    `;
+      let srcFile = null;
+      const dropZone = container.querySelector("#unlock-drop");
+      const input = container.querySelector("#unlock-input");
+      const nameEl = container.querySelector("#unlock-filename");
+      const runBtn = container.querySelector("#unlock-run");
+      const setFile = (file) => {
+        srcFile = file;
+        nameEl.textContent = file.name;
+        runBtn.disabled = false;
+      };
+      dropZone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropZone.classList.add("drag-over");
+      });
+      dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag-over"));
+      dropZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropZone.classList.remove("drag-over");
+        const f = Array.from(e.dataTransfer.files).find((f2) => f2.name.toLowerCase().endsWith(".pdf"));
+        if (f)
+          setFile(f);
+      });
+      container.querySelector("#unlock-browse").addEventListener("click", () => input.click());
+      input.addEventListener("change", (e) => {
+        if (e.target.files[0])
+          setFile(e.target.files[0]);
+        input.value = "";
+      });
+      runBtn.addEventListener("click", async () => {
+        if (!srcFile)
+          return;
+        showProgress("Loading PDF\u2026");
+        try {
+          const bytes = await readFile(srcFile);
+          let doc;
+          let usedFallback = false;
+          try {
+            doc = await load2(bytes);
+          } catch (err) {
+            if (err.code !== "ENCRYPTED")
+              throw err;
+            hideProgress();
+            const pwd = await promptPassword(srcFile.name);
+            if (!pwd)
+              return;
+            showProgress("Decrypting\u2026");
+            try {
+              doc = await load2(bytes, pwd);
+            } catch (err2) {
+              if (err2.code !== "WRONG_PASSWORD")
+                throw err2;
+              updateProgress("Trying fallback renderer\u2026");
+              let renderDoc;
+              try {
+                renderDoc = await loadForRender(bytes, pwd);
+              } catch (err3) {
+                if (err3.code === "WRONG_PASSWORD") {
+                  toast("Wrong password \u2014 could not decrypt the PDF.", "error");
+                  return;
+                }
+                throw err3;
+              }
+              const total = renderDoc.numPages;
+              const outBytes2 = await renderToUnencryptedPdf(renderDoc, {
+                onProgress: (n, t) => updateProgress(`Rendering page ${n} of ${t}\u2026`)
+              });
+              renderDoc.destroy();
+              const outName2 = srcFile.name.replace(/\.pdf$/i, "_unlocked.pdf");
+              await saveAs(outBytes2, outName2);
+              toast(
+                `Unlocked \u2192 ${outName2} (${total} pages, image-based fallback \u2014 text may not be selectable)`,
+                "success",
+                5e3
+              );
+              return;
+            }
+          }
+          updateProgress("Saving unlocked PDF\u2026");
+          const outBytes = await save2(doc);
+          const outName = srcFile.name.replace(/\.pdf$/i, "_unlocked.pdf");
+          await saveAs(outBytes, outName);
+          toast(
+            `Unlocked \u2192 ${outName} (${doc.getPageCount()} page${doc.getPageCount() > 1 ? "s" : ""})`,
+            "success"
+          );
+        } catch (err) {
+          if (err.name !== "AbortError") {
+            console.error(err);
+            toast("Failed: " + err.message, "error");
+          }
+        } finally {
+          hideProgress();
+        }
+      });
+    }
+  });
+
   // src/features/organise.js
   init_ui();
   registerFeature({
@@ -69169,7 +69311,7 @@ ${trimmed}`);
   }
   function stampVersion() {
     document.querySelectorAll(".sidebar-version").forEach((el) => {
-      if (el.textContent.includes("1.0.0"))
+      if (el.textContent.includes("1.5.0"))
         el.textContent = "dev";
     });
   }
