@@ -1018,7 +1018,7 @@ small { font-size: 12px; color: var(--text-muted); }
     <aside class="sidebar">
       <div class="sidebar-header">
         <span class="sidebar-logo">Folio</span>
-        <span class="sidebar-version">v1.5.0</span>
+        <span class="sidebar-version">v1.6.0</span>
       </div>
       <nav id="feature-nav" class="feature-nav"></nav>
       <div class="sidebar-footer">
@@ -69212,6 +69212,758 @@ ${trimmed}`);
     }
   });
 
+  // src/features/crop.js
+  init_ui();
+  var PT_PER_MM = 72 / 25.4;
+  registerFeature({
+    id: "crop",
+    name: "Crop Pages",
+    category: "Edit",
+    icon: "\u2702",
+    description: "Trim margins \u2014 removes white space around pages",
+    render(container) {
+      container.innerHTML = `
+      <div class="feature-header">
+        <h2>Crop Pages</h2>
+        <p class="feature-desc">
+          Trim margins around your PDF pages. Drag the handles on the preview
+          to set the crop area \u2014 or type exact margins in millimetres below.
+        </p>
+      </div>
+
+      <div class="feature-split">
+
+        <!-- \u2500\u2500 LEFT: Source + Settings \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 -->
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">\u2460 Source &amp; Settings</span></div>
+
+          <div class="file-drop-zone" id="crop-drop">
+            <span>Drag a PDF here, or</span>
+            <button class="btn btn-sm" id="crop-browse">Browse</button>
+            <input type="file" id="crop-input" accept=".pdf" hidden>
+          </div>
+          <div id="crop-filename" class="file-name-display"></div>
+
+          <div class="section-label" style="margin-top:14px;">Margins to trim (mm)</div>
+          <div class="option-row">
+            <label>Top</label>
+            <input type="number" id="crop-top" class="input" value="0" min="0" step="1" style="max-width:100px;">
+          </div>
+          <div class="option-row">
+            <label>Right</label>
+            <input type="number" id="crop-right" class="input" value="0" min="0" step="1" style="max-width:100px;">
+          </div>
+          <div class="option-row">
+            <label>Bottom</label>
+            <input type="number" id="crop-bottom" class="input" value="0" min="0" step="1" style="max-width:100px;">
+          </div>
+          <div class="option-row">
+            <label>Left</label>
+            <input type="number" id="crop-left" class="input" value="0" min="0" step="1" style="max-width:100px;">
+          </div>
+
+          <div class="section-label" style="margin-top:14px;">Quick presets</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;">
+            <button class="btn btn-sm" data-preset="reset">Reset</button>
+            <button class="btn btn-sm" data-preset="5">Trim 5mm</button>
+            <button class="btn btn-sm" data-preset="10">Trim 10mm</button>
+            <button class="btn btn-sm" data-preset="15">Trim 15mm</button>
+            <button class="btn btn-sm" data-preset="20">Trim 20mm</button>
+          </div>
+
+          <div class="section-label" style="margin-top:14px;">Apply to</div>
+          <div class="option-row">
+            <label>Pages</label>
+            <select id="crop-pages-sel" class="input" style="max-width:180px;">
+              <option value="all" selected>All pages</option>
+              <option value="custom">Custom range\u2026</option>
+            </select>
+          </div>
+          <div id="crop-pages-custom-row" class="option-row" style="display:none;">
+            <label>Range</label>
+            <input type="text" id="crop-pages-custom" class="input"
+              placeholder="e.g. 1-3, 5, 8-10" style="max-width:200px;">
+          </div>
+
+          <div class="action-bar" style="margin-top:20px;">
+            <button class="btn btn-primary btn-lg" id="crop-run" disabled
+              style="width:100%;justify-content:center;">
+              Save Cropped PDF
+            </button>
+          </div>
+          <div class="status-text" id="crop-status" style="text-align:center;margin-top:8px;">
+            Load a PDF to get started.
+          </div>
+
+          <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border);">
+            <p style="font-size:12px;color:var(--text-subtle);line-height:1.7;">
+              \u2139 Cropping only adjusts what viewers display. The original
+              content is preserved in the file \u2014 open the result in Acrobat and
+              "Reset Page Boxes" restores the full page if needed.
+            </p>
+          </div>
+        </div>
+
+        <!-- \u2500\u2500 RIGHT: Preview \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 -->
+        <div class="panel" style="display:flex;flex-direction:column;">
+          <div class="panel-header">
+            <span class="panel-title">\u2461 Preview</span>
+            <span class="status-text" id="crop-dims"></span>
+          </div>
+
+          <div id="crop-preview-wrap"
+            style="position:relative;flex:1;min-height:420px;display:flex;
+                   align-items:center;justify-content:center;
+                   background:var(--bg);border:1px solid var(--border);
+                   border-radius:var(--radius-sm);overflow:hidden;">
+            <div id="crop-preview-empty" style="color:var(--text-subtle);font-size:13px;">
+              Preview will appear here after loading a PDF.
+            </div>
+            <div id="crop-preview-stage" style="position:relative;display:none;">
+              <canvas id="crop-canvas" style="display:block;box-shadow:var(--shadow);"></canvas>
+              <div id="crop-overlay"
+                style="position:absolute;border:2px solid var(--blue);
+                       background:rgba(37,99,235,0.08);box-sizing:border-box;
+                       cursor:move;">
+                <div class="crop-handle" data-h="nw" style="top:-7px;left:-7px;cursor:nwse-resize;"></div>
+                <div class="crop-handle" data-h="n"  style="top:-7px;left:50%;margin-left:-6px;cursor:ns-resize;"></div>
+                <div class="crop-handle" data-h="ne" style="top:-7px;right:-7px;cursor:nesw-resize;"></div>
+                <div class="crop-handle" data-h="e"  style="top:50%;right:-7px;margin-top:-6px;cursor:ew-resize;"></div>
+                <div class="crop-handle" data-h="se" style="bottom:-7px;right:-7px;cursor:nwse-resize;"></div>
+                <div class="crop-handle" data-h="s"  style="bottom:-7px;left:50%;margin-left:-6px;cursor:ns-resize;"></div>
+                <div class="crop-handle" data-h="sw" style="bottom:-7px;left:-7px;cursor:nesw-resize;"></div>
+                <div class="crop-handle" data-h="w"  style="top:50%;left:-7px;margin-top:-6px;cursor:ew-resize;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <style>
+        .crop-handle {
+          position: absolute; width: 12px; height: 12px;
+          background: var(--blue); border: 2px solid #fff;
+          border-radius: 2px; box-sizing: border-box;
+          box-shadow: 0 0 0 1px rgba(0,0,0,0.15);
+        }
+      </style>
+    `;
+      let srcFile = null;
+      let srcBytes = null;
+      let pageWidthPt = 0;
+      let pageHeightPt = 0;
+      let displayScale = 1;
+      const margins = { top: 0, right: 0, bottom: 0, left: 0 };
+      const $ = (sel) => container.querySelector(sel);
+      const runBtn = $("#crop-run");
+      const statusEl = $("#crop-status");
+      const nameEl = $("#crop-filename");
+      const canvas = $("#crop-canvas");
+      const overlay = $("#crop-overlay");
+      const stage = $("#crop-preview-stage");
+      const empty = $("#crop-preview-empty");
+      const dimsEl = $("#crop-dims");
+      const inputs = {
+        top: $("#crop-top"),
+        right: $("#crop-right"),
+        bottom: $("#crop-bottom"),
+        left: $("#crop-left")
+      };
+      function syncOverlayFromMargins() {
+        if (!pageWidthPt)
+          return;
+        const leftPx = margins.left * PT_PER_MM * displayScale;
+        const topPx = margins.top * PT_PER_MM * displayScale;
+        const rightPx = margins.right * PT_PER_MM * displayScale;
+        const bottomPx = margins.bottom * PT_PER_MM * displayScale;
+        const widthPx = canvas.width - leftPx - rightPx;
+        const heightPx = canvas.height - topPx - bottomPx;
+        overlay.style.left = leftPx + "px";
+        overlay.style.top = topPx + "px";
+        overlay.style.width = Math.max(20, widthPx) + "px";
+        overlay.style.height = Math.max(20, heightPx) + "px";
+        const cropWmm = pageWidthPt / PT_PER_MM - margins.left - margins.right;
+        const cropHmm = pageHeightPt / PT_PER_MM - margins.top - margins.bottom;
+        dimsEl.textContent = `Output: ${cropWmm.toFixed(0)} \xD7 ${cropHmm.toFixed(0)} mm`;
+      }
+      function syncInputsFromMargins() {
+        inputs.top.value = Math.round(margins.top);
+        inputs.right.value = Math.round(margins.right);
+        inputs.bottom.value = Math.round(margins.bottom);
+        inputs.left.value = Math.round(margins.left);
+      }
+      function clampMargins() {
+        const maxH = pageWidthPt / PT_PER_MM - 5;
+        const maxV = pageHeightPt / PT_PER_MM - 5;
+        if (margins.left + margins.right > maxH) {
+          margins.right = Math.max(0, maxH - margins.left);
+        }
+        if (margins.top + margins.bottom > maxV) {
+          margins.bottom = Math.max(0, maxV - margins.top);
+        }
+        for (const k of Object.keys(margins))
+          margins[k] = Math.max(0, margins[k]);
+      }
+      function updateAll() {
+        clampMargins();
+        syncInputsFromMargins();
+        syncOverlayFromMargins();
+      }
+      Object.entries(inputs).forEach(([side, el]) => {
+        el.addEventListener("input", () => {
+          margins[side] = parseFloat(el.value) || 0;
+          updateAll();
+        });
+      });
+      container.querySelectorAll("[data-preset]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const p = btn.dataset.preset;
+          if (p === "reset") {
+            margins.top = margins.right = margins.bottom = margins.left = 0;
+          } else {
+            const v = parseFloat(p);
+            margins.top = margins.right = margins.bottom = margins.left = v;
+          }
+          updateAll();
+        });
+      });
+      let dragState = null;
+      overlay.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        const handle = e.target.closest(".crop-handle");
+        const rect = overlay.getBoundingClientRect();
+        dragState = {
+          handle: handle ? handle.dataset.h : "move",
+          startX: e.clientX,
+          startY: e.clientY,
+          startLeft: parseFloat(overlay.style.left) || 0,
+          startTop: parseFloat(overlay.style.top) || 0,
+          startWidth: rect.width,
+          startHeight: rect.height
+        };
+      });
+      window.addEventListener("mousemove", (e) => {
+        if (!dragState)
+          return;
+        const dx = e.clientX - dragState.startX;
+        const dy = e.clientY - dragState.startY;
+        const { handle, startLeft, startTop, startWidth, startHeight } = dragState;
+        let newLeft = startLeft;
+        let newTop = startTop;
+        let newRight = canvas.width - startLeft - startWidth;
+        let newBottom = canvas.height - startTop - startHeight;
+        if (handle === "move") {
+          newLeft = Math.max(0, Math.min(canvas.width - startWidth, startLeft + dx));
+          newTop = Math.max(0, Math.min(canvas.height - startHeight, startTop + dy));
+          newRight = canvas.width - newLeft - startWidth;
+          newBottom = canvas.height - newTop - startHeight;
+        } else {
+          if (handle.includes("n")) {
+            newTop = Math.max(0, Math.min(canvas.height - 20, startTop + dy));
+          }
+          if (handle.includes("s")) {
+            newBottom = Math.max(0, Math.min(canvas.height - 20, canvas.height - startTop - startHeight - dy));
+          }
+          if (handle.includes("w")) {
+            newLeft = Math.max(0, Math.min(canvas.width - 20, startLeft + dx));
+          }
+          if (handle.includes("e")) {
+            newRight = Math.max(0, Math.min(canvas.width - 20, canvas.width - startLeft - startWidth - dx));
+          }
+        }
+        margins.left = newLeft / displayScale / PT_PER_MM;
+        margins.top = newTop / displayScale / PT_PER_MM;
+        margins.right = newRight / displayScale / PT_PER_MM;
+        margins.bottom = newBottom / displayScale / PT_PER_MM;
+        updateAll();
+      });
+      window.addEventListener("mouseup", () => {
+        dragState = null;
+      });
+      $("#crop-pages-sel").addEventListener("change", (e) => {
+        $("#crop-pages-custom-row").style.display = e.target.value === "custom" ? "flex" : "none";
+      });
+      async function setFile(file) {
+        srcFile = file;
+        nameEl.textContent = file.name;
+        statusEl.textContent = "Rendering preview\u2026";
+        runBtn.disabled = true;
+        empty.style.display = "block";
+        stage.style.display = "none";
+        try {
+          srcBytes = await readFile(file);
+          let rDoc;
+          try {
+            rDoc = await loadForRender(srcBytes);
+          } catch (err) {
+            if (err.code !== "ENCRYPTED")
+              throw err;
+            const pwd = await promptPassword(file.name);
+            if (!pwd) {
+              statusEl.textContent = "Cancelled.";
+              return;
+            }
+            rDoc = await loadForRender(srcBytes, pwd);
+            toast("Password-protected PDFs: crop works on rendered pages only in v1.", "warning");
+          }
+          const page1 = await rDoc.getPage(1);
+          const nativeVp = page1.getViewport({ scale: 1 });
+          pageWidthPt = nativeVp.width;
+          pageHeightPt = nativeVp.height;
+          const wrap = $("#crop-preview-wrap");
+          const maxW = Math.max(200, wrap.clientWidth - 40);
+          const maxH = Math.max(200, wrap.clientHeight - 40);
+          const scaleW = maxW / pageWidthPt;
+          const scaleH = maxH / pageHeightPt;
+          displayScale = Math.min(scaleW, scaleH, 1.5);
+          const vp = page1.getViewport({ scale: displayScale });
+          canvas.width = Math.round(vp.width);
+          canvas.height = Math.round(vp.height);
+          await page1.render({ canvasContext: canvas.getContext("2d"), viewport: vp }).promise;
+          page1.cleanup();
+          rDoc.destroy();
+          empty.style.display = "none";
+          stage.style.display = "block";
+          margins.top = margins.right = margins.bottom = margins.left = 0;
+          updateAll();
+          runBtn.disabled = false;
+          statusEl.textContent = "Ready.";
+        } catch (err) {
+          console.error(err);
+          statusEl.textContent = "Failed to load: " + err.message;
+          toast("Load failed: " + err.message, "error");
+        }
+      }
+      setupDropZone("crop-drop", "crop-input", setFile);
+      runBtn.addEventListener("click", async () => {
+        if (!srcBytes)
+          return;
+        showProgress("Cropping\u2026");
+        try {
+          let doc;
+          try {
+            doc = await load2(srcBytes);
+          } catch (err) {
+            if (err.code !== "ENCRYPTED")
+              throw err;
+            hideProgress();
+            const pwd = await promptPassword(srcFile.name);
+            if (!pwd)
+              return;
+            showProgress("Decrypting\u2026");
+            doc = await load2(srcBytes, pwd);
+          }
+          const totalPages = doc.getPageCount();
+          let pageIndices;
+          if ($("#crop-pages-sel").value === "custom") {
+            const raw = $("#crop-pages-custom").value.trim();
+            pageIndices = parsePageRange(raw, totalPages);
+            if (!pageIndices.length) {
+              toast("Invalid page range.", "warning");
+              hideProgress();
+              return;
+            }
+          } else {
+            pageIndices = Array.from({ length: totalPages }, (_, i) => i);
+          }
+          const topPt = margins.top * PT_PER_MM;
+          const rightPt = margins.right * PT_PER_MM;
+          const bottomPt = margins.bottom * PT_PER_MM;
+          const leftPt = margins.left * PT_PER_MM;
+          for (const i of pageIndices) {
+            const page = doc.getPage(i);
+            const { width: w, height: h } = page.getSize();
+            const cropW = Math.max(5, w - leftPt - rightPt);
+            const cropH = Math.max(5, h - topPt - bottomPt);
+            page.setCropBox(leftPt, bottomPt, cropW, cropH);
+          }
+          updateProgress("Saving\u2026");
+          const outBytes = await save2(doc);
+          const outName = stripExt(srcFile.name) + "_cropped.pdf";
+          await saveAs(outBytes, outName);
+          toast(`Cropped \u2192 ${outName} (${pageIndices.length} page${pageIndices.length > 1 ? "s" : ""})`, "success");
+        } catch (err) {
+          if (err.name !== "AbortError") {
+            console.error(err);
+            toast("Failed: " + err.message, "error");
+          }
+        } finally {
+          hideProgress();
+        }
+      });
+      function setupDropZone(dropId, inputId, onFile) {
+        const zone = container.querySelector(`#${dropId}`);
+        const input = container.querySelector(`#${inputId}`);
+        zone.addEventListener("dragover", (e) => {
+          e.preventDefault();
+          zone.classList.add("drag-over");
+        });
+        zone.addEventListener("dragleave", () => zone.classList.remove("drag-over"));
+        zone.addEventListener("drop", (e) => {
+          e.preventDefault();
+          zone.classList.remove("drag-over");
+          const f = [...e.dataTransfer.files].find((f2) => f2.name.toLowerCase().endsWith(".pdf"));
+          if (f)
+            onFile(f);
+        });
+        zone.querySelector("button").addEventListener("click", () => input.click());
+        input.addEventListener("change", (e) => {
+          if (e.target.files[0]) {
+            onFile(e.target.files[0]);
+            input.value = "";
+          }
+        });
+      }
+    }
+  });
+
+  // src/features/extract-images.js
+  init_ui();
+  var IMAGE_OPS = /* @__PURE__ */ new Set();
+  function imageOpsFor(OPS2) {
+    if (IMAGE_OPS.size)
+      return IMAGE_OPS;
+    [
+      "paintImageXObject",
+      "paintJpegXObject",
+      "paintImageXObjectRepeat",
+      "paintInlineImageXObject"
+    ].forEach((n) => {
+      if (OPS2[n] != null)
+        IMAGE_OPS.add(OPS2[n]);
+    });
+    return IMAGE_OPS;
+  }
+  function getImageObj(page, name) {
+    return new Promise((resolve, reject) => {
+      try {
+        page.objs.get(name, (img) => resolve(img));
+      } catch (err) {
+        reject(err);
+      }
+    });
+  }
+  function imageToCanvas(img) {
+    const w = img.width;
+    const h = img.height;
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (img.bitmap) {
+      ctx.drawImage(img.bitmap, 0, 0, w, h);
+      return canvas;
+    }
+    if (typeof ImageBitmap !== "undefined" && img instanceof ImageBitmap) {
+      ctx.drawImage(img, 0, 0, w, h);
+      return canvas;
+    }
+    const src = img.data;
+    const pixels = ctx.createImageData(w, h);
+    const dst = pixels.data;
+    if (img.kind === 3 || src.length === w * h * 4) {
+      dst.set(src);
+    } else if (img.kind === 2 || src.length === w * h * 3) {
+      for (let i = 0, j = 0; i < src.length; i += 3, j += 4) {
+        dst[j] = src[i];
+        dst[j + 1] = src[i + 1];
+        dst[j + 2] = src[i + 2];
+        dst[j + 3] = 255;
+      }
+    } else if (src.length === w * h) {
+      for (let i = 0, j = 0; i < src.length; i++, j += 4) {
+        dst[j] = dst[j + 1] = dst[j + 2] = src[i];
+        dst[j + 3] = 255;
+      }
+    } else {
+      dst.set(src.subarray(0, Math.min(src.length, dst.length)));
+    }
+    ctx.putImageData(pixels, 0, 0);
+    return canvas;
+  }
+  registerFeature({
+    id: "extract-images",
+    name: "Extract Images",
+    category: "Export",
+    icon: "\u{1F3A8}",
+    description: "Pull embedded images out of a PDF and save them as files",
+    render(container) {
+      container.innerHTML = `
+      <div class="feature-header">
+        <h2>Extract Images</h2>
+        <p class="feature-desc">
+          Find raster images embedded in the PDF and save each one as a separate
+          image file. Text and vector graphics are not extracted \u2014 only bitmap
+          images (photos, scans, logos).
+        </p>
+      </div>
+
+      <div class="feature-split">
+
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">\u2460 Source PDF</span></div>
+
+          <div class="file-drop-zone" id="ei-drop">
+            <span>Drag a PDF here, or</span>
+            <button class="btn btn-sm" id="ei-browse">Browse</button>
+            <input type="file" id="ei-input" accept=".pdf" hidden>
+          </div>
+          <div id="ei-filename" class="file-name-display"></div>
+
+          <div class="section-label" style="margin-top:14px;">Format</div>
+          <div class="option-row">
+            <label>Save as</label>
+            <select id="ei-format" class="input" style="max-width:160px;">
+              <option value="png" selected>PNG (lossless)</option>
+              <option value="jpeg">JPEG (smaller)</option>
+            </select>
+          </div>
+
+          <div class="option-row" id="ei-quality-row" style="display:none;">
+            <label>JPEG quality <span id="ei-quality-val">92%</span></label>
+            <input type="range" id="ei-quality" min="50" max="100" value="92" style="flex:1;">
+          </div>
+
+          <div class="section-label" style="margin-top:14px;">Pages</div>
+          <div class="option-row">
+            <label>Scan</label>
+            <select id="ei-pages-sel" class="input" style="max-width:180px;">
+              <option value="all">All pages</option>
+              <option value="custom">Custom range\u2026</option>
+            </select>
+          </div>
+          <div id="ei-pages-custom-row" class="option-row" style="display:none;">
+            <label>Range</label>
+            <input type="text" id="ei-pages-custom" class="input"
+              placeholder="e.g. 1-3, 5, 8-10" style="max-width:200px;">
+          </div>
+
+          <div class="section-label" style="margin-top:14px;">Filter</div>
+          <div class="option-row">
+            <label>Skip small</label>
+            <select id="ei-min-size" class="input" style="max-width:200px;">
+              <option value="0">Keep all images</option>
+              <option value="64" selected>Skip under 64\xD764 px</option>
+              <option value="128">Skip under 128\xD7128 px</option>
+              <option value="256">Skip under 256\xD7256 px</option>
+            </select>
+          </div>
+          <span class="status-text" style="display:block;margin-top:4px;">
+            Useful for skipping tiny icons, bullets and background fills.
+          </span>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">\u2461 Export to Folder</span></div>
+
+          <div class="option-row" style="flex-direction:column;align-items:flex-start;gap:4px;">
+            <label style="min-width:unset;">Filename prefix</label>
+            <input type="text" id="ei-prefix" class="input" placeholder="image">
+            <span class="status-text" style="margin-top:2px;">
+              Files will be named: <em>prefix_p01_1.png</em>, <em>prefix_p01_2.png</em>, \u2026
+            </span>
+          </div>
+
+          <div style="margin-top:20px;">
+            <button class="btn btn-primary btn-lg" id="ei-run" disabled
+              style="width:100%;justify-content:center;">
+              Extract Images\u2026
+            </button>
+            <div class="status-text" id="ei-status" style="text-align:center;margin-top:8px;">
+              Load a PDF to get started.
+            </div>
+          </div>
+
+          <div style="margin-top:20px;padding-top:14px;border-top:1px solid var(--border);">
+            <p style="font-size:12px;color:var(--text-subtle);line-height:1.7;">
+              \u2139 You will be asked to choose a destination folder. Duplicate images
+              (the same logo reused on many pages) are saved only once.
+              <br><br>
+              If the PDF is a scan, every page is one big image \u2014 you'll get one
+              image per page. For true "photos embedded in a document", this tool
+              extracts each unique bitmap.
+            </p>
+          </div>
+        </div>
+
+      </div>
+    `;
+      let srcFile = null;
+      const runBtn = container.querySelector("#ei-run");
+      const statusEl = container.querySelector("#ei-status");
+      const nameEl = container.querySelector("#ei-filename");
+      function setFile(file) {
+        srcFile = file;
+        nameEl.textContent = file.name;
+        container.querySelector("#ei-prefix").value = stripExt(file.name);
+        runBtn.disabled = false;
+        statusEl.textContent = "Ready.";
+      }
+      const zone = container.querySelector("#ei-drop");
+      const input = container.querySelector("#ei-input");
+      zone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        zone.classList.add("drag-over");
+      });
+      zone.addEventListener("dragleave", () => zone.classList.remove("drag-over"));
+      zone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        zone.classList.remove("drag-over");
+        const f = [...e.dataTransfer.files].find((f2) => f2.name.toLowerCase().endsWith(".pdf"));
+        if (f)
+          setFile(f);
+      });
+      container.querySelector("#ei-browse").addEventListener("click", () => input.click());
+      input.addEventListener("change", (e) => {
+        if (e.target.files[0]) {
+          setFile(e.target.files[0]);
+          input.value = "";
+        }
+      });
+      container.querySelector("#ei-format").addEventListener("change", (e) => {
+        container.querySelector("#ei-quality-row").style.display = e.target.value === "jpeg" ? "flex" : "none";
+      });
+      const qualitySlider = container.querySelector("#ei-quality");
+      const qualityLabel = container.querySelector("#ei-quality-val");
+      qualitySlider.addEventListener("input", () => {
+        qualityLabel.textContent = qualitySlider.value + "%";
+      });
+      container.querySelector("#ei-pages-sel").addEventListener("change", (e) => {
+        container.querySelector("#ei-pages-custom-row").style.display = e.target.value === "custom" ? "flex" : "none";
+      });
+      runBtn.addEventListener("click", async () => {
+        showProgress("Loading PDF\u2026");
+        try {
+          const bytes = await readFile(srcFile);
+          let rDoc;
+          try {
+            rDoc = await loadForRender(bytes);
+          } catch (err) {
+            if (err.code !== "ENCRYPTED")
+              throw err;
+            hideProgress();
+            const pwd = await promptPassword(srcFile.name);
+            if (!pwd)
+              return;
+            showProgress("Decrypting\u2026");
+            rDoc = await loadForRender(bytes, pwd);
+          }
+          const format = container.querySelector("#ei-format").value;
+          const quality = parseInt(qualitySlider.value) / 100;
+          const minSize = parseInt(container.querySelector("#ei-min-size").value);
+          const prefix = container.querySelector("#ei-prefix").value.trim() || "image";
+          const mimeType = format === "jpeg" ? "image/jpeg" : "image/png";
+          const ext = format === "jpeg" ? "jpg" : "png";
+          const totalPgs = rDoc.numPages;
+          let pageNums;
+          if (container.querySelector("#ei-pages-sel").value === "custom") {
+            const raw = container.querySelector("#ei-pages-custom").value.trim();
+            const idxs = parsePageRange(raw, totalPgs);
+            if (!idxs.length) {
+              toast("Invalid page range.", "warning");
+              rDoc.destroy();
+              hideProgress();
+              return;
+            }
+            pageNums = idxs.map((i) => i + 1);
+          } else {
+            pageNums = Array.from({ length: totalPgs }, (_, i) => i + 1);
+          }
+          updateProgress("Choose a destination folder\u2026");
+          let destDir;
+          try {
+            destDir = await window.showDirectoryPicker({ mode: "readwrite" });
+          } catch {
+            rDoc.destroy();
+            hideProgress();
+            return;
+          }
+          const OPS2 = OPS;
+          const imageOps = imageOpsFor(OPS2);
+          const seenNames = /* @__PURE__ */ new Set();
+          let savedCount = 0;
+          let skippedSmall = 0;
+          for (let i = 0; i < pageNums.length; i++) {
+            const pNum = pageNums[i];
+            updateProgress(`Scanning page ${pNum} (${i + 1}/${pageNums.length}) \u2014 ${savedCount} image${savedCount === 1 ? "" : "s"} so far\u2026`);
+            const page = await rDoc.getPage(pNum);
+            const ops = await page.getOperatorList();
+            const imagesOnPage = [];
+            for (let k = 0; k < ops.fnArray.length; k++) {
+              if (!imageOps.has(ops.fnArray[k]))
+                continue;
+              const args = ops.argsArray[k];
+              const name = args?.[0];
+              if (ops.fnArray[k] === OPS2.paintInlineImageXObject) {
+                imagesOnPage.push({ obj: name, inline: true });
+              } else if (typeof name === "string") {
+                imagesOnPage.push({ name, inline: false });
+              }
+            }
+            let pageIdx = 0;
+            for (const entry of imagesOnPage) {
+              pageIdx++;
+              let img;
+              try {
+                if (entry.inline) {
+                  img = entry.obj;
+                } else {
+                  if (seenNames.has(entry.name))
+                    continue;
+                  seenNames.add(entry.name);
+                  img = await getImageObj(page, entry.name);
+                }
+              } catch {
+                continue;
+              }
+              if (!img || !img.width || !img.height)
+                continue;
+              if (minSize && (img.width < minSize || img.height < minSize)) {
+                skippedSmall++;
+                continue;
+              }
+              let canvas;
+              try {
+                canvas = imageToCanvas(img);
+              } catch (e) {
+                console.warn("extract-images: failed to render", e);
+                continue;
+              }
+              const blob = await new Promise((res) => canvas.toBlob(res, mimeType, quality));
+              if (!blob)
+                continue;
+              const pPad = String(pNum).padStart(String(totalPgs).length, "0");
+              const fname = `${prefix}_p${pPad}_${pageIdx}.${ext}`;
+              const fh = await destDir.getFileHandle(fname, { create: true });
+              const writable = await fh.createWritable();
+              await writable.write(blob);
+              await writable.close();
+              savedCount++;
+            }
+            page.cleanup();
+          }
+          rDoc.destroy();
+          if (savedCount === 0) {
+            const hint = skippedSmall ? ` (${skippedSmall} tiny image${skippedSmall > 1 ? "s" : ""} skipped \u2014 lower the size filter to include them)` : "";
+            toast(`No images found in the selected pages${hint}.`, "warning", 5e3);
+            statusEl.textContent = "Nothing to extract.";
+          } else {
+            const extra = skippedSmall ? ` (${skippedSmall} small skipped)` : "";
+            toast(`${savedCount} image${savedCount > 1 ? "s" : ""} saved to "${destDir.name}"${extra}`, "success");
+            statusEl.textContent = `Done \u2014 ${savedCount} image${savedCount > 1 ? "s" : ""} extracted as ${ext.toUpperCase()}.`;
+          }
+        } catch (err) {
+          if (err.name !== "AbortError") {
+            console.error(err);
+            toast("Failed: " + err.message, "error");
+          }
+        } finally {
+          hideProgress();
+        }
+      });
+    }
+  });
+
   // src/core/app.js
   function navigate(featureId) {
     const feature = getFeature(featureId);
@@ -69311,7 +70063,7 @@ ${trimmed}`);
   }
   function stampVersion() {
     document.querySelectorAll(".sidebar-version").forEach((el) => {
-      if (el.textContent.includes("1.5.0"))
+      if (el.textContent.includes("1.6.0"))
         el.textContent = "dev";
     });
   }
