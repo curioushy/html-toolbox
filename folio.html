@@ -70518,7 +70518,7 @@ ${trimmed}`);
           const pNum = Math.max(1, Math.min(totalPgs, parseInt(pageNumEl.value) || 1));
           insertIdx = where === "before" ? pNum - 1 : pNum;
         }
-        let [w, h];
+        let w, h;
         if (sizeKey === "match") {
           const adjIdx = Math.min(insertIdx, totalPgs - 1);
           const adjPage = pdfDoc.getPage(adjIdx);
