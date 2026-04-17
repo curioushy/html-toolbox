@@ -1018,7 +1018,7 @@ small { font-size: 12px; color: var(--text-muted); }
     <aside class="sidebar">
       <div class="sidebar-header">
         <span class="sidebar-logo">Folio</span>
-        <span class="sidebar-version">v1.7.0</span>
+        <span class="sidebar-version">v2.0.0</span>
       </div>
       <nav id="feature-nav" class="feature-nav"></nav>
       <div class="sidebar-footer">
@@ -70126,6 +70126,2122 @@ ${trimmed}`);
     }
   });
 
+  // src/features/rotate.js
+  init_ui();
+  registerFeature({
+    id: "rotate",
+    name: "Rotate Pages",
+    category: "Edit",
+    icon: "\u21BB",
+    description: "Rotate individual pages or the whole document by 90\xB0, 180\xB0 or 270\xB0",
+    render(container) {
+      container.innerHTML = `
+      <div class="feature-header">
+        <h2>Rotate Pages</h2>
+        <p class="feature-desc">
+          Select pages in the grid below, then use the rotate buttons.
+          Click a thumbnail to select \xB7 Shift-click for a range \xB7 Ctrl/\u2318-click to toggle.
+        </p>
+      </div>
+
+      <div class="feature-split" style="margin-bottom:10px;">
+
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">\u2460 Open PDF</span>
+            <span id="rot-page-count" class="status-text"></span>
+          </div>
+          <div class="file-drop-zone" id="rot-drop">
+            <span>Drag a PDF here, or</span>
+            <button class="btn btn-sm" id="rot-browse">Browse</button>
+            <input type="file" id="rot-input" accept=".pdf" hidden>
+          </div>
+          <div id="rot-filename" class="file-name-display"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">\u2461 Rotate &amp; Save</span></div>
+
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;" id="rot-btns">
+            <button class="btn" id="rot-sel-all"  disabled>Select All</button>
+            <button class="btn" id="rot-sel-none" disabled>Deselect All</button>
+          </div>
+
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+            <button class="btn btn-primary" id="rot-ccw" disabled title="Rotate selected 90\xB0 counter-clockwise">\u21BA 90\xB0 CCW</button>
+            <button class="btn btn-primary" id="rot-cw"  disabled title="Rotate selected 90\xB0 clockwise">\u21BB 90\xB0 CW</button>
+            <button class="btn btn-primary" id="rot-180" disabled title="Rotate selected 180\xB0">\u2922 180\xB0</button>
+          </div>
+
+          <div class="status-text" id="rot-sel-status" style="margin-bottom:14px;">Load a PDF to get started.</div>
+
+          <button class="btn btn-primary btn-lg" id="rot-save" disabled style="width:100%;justify-content:center;">
+            Save Rotated PDF
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Thumbnail grid -->
+      <div class="panel" id="rot-grid-panel" style="display:none;">
+        <div class="panel-header"><span class="panel-title">Pages</span></div>
+        <div id="rot-grid" class="split-thumbs" style="display:flex;flex-wrap:wrap;gap:10px;padding:4px;"></div>
+      </div>
+    `;
+      let srcFile = null;
+      let pdfDoc = null;
+      let rDoc = null;
+      let totalPages = 0;
+      let selected = /* @__PURE__ */ new Set();
+      let lastClicked = -1;
+      const countEl = container.querySelector("#rot-page-count");
+      const nameEl = container.querySelector("#rot-filename");
+      const selStatus = container.querySelector("#rot-sel-status");
+      const gridPanel = container.querySelector("#rot-grid-panel");
+      const gridEl = container.querySelector("#rot-grid");
+      const saveBtn = container.querySelector("#rot-save");
+      const setRotBtnsDisabled = (v) => {
+        ;
+        ["#rot-ccw", "#rot-cw", "#rot-180", "#rot-sel-all", "#rot-sel-none", "#rot-save"].forEach((id) => {
+          container.querySelector(id).disabled = v;
+        });
+      };
+      function updateSelStatus() {
+        const n = selected.size;
+        selStatus.textContent = n ? `${n} of ${totalPages} page${totalPages > 1 ? "s" : ""} selected` : "No pages selected \u2014 click thumbnails to select.";
+        container.querySelector("#rot-ccw").disabled = n === 0;
+        container.querySelector("#rot-cw").disabled = n === 0;
+        container.querySelector("#rot-180").disabled = n === 0;
+      }
+      function syncGridSelection() {
+        gridEl.querySelectorAll(".split-thumb").forEach((el) => {
+          el.classList.toggle("selected", selected.has(parseInt(el.dataset.page) - 1));
+        });
+        updateSelStatus();
+      }
+      async function loadFile(file) {
+        srcFile = file;
+        nameEl.textContent = file.name;
+        showProgress("Loading PDF\u2026");
+        try {
+          const bytes = await readFile(file);
+          try {
+            pdfDoc = await load2(bytes);
+          } catch (err) {
+            if (err.code !== "ENCRYPTED")
+              throw err;
+            hideProgress();
+            const pwd = await promptPassword(file.name);
+            if (!pwd)
+              return;
+            showProgress("Decrypting\u2026");
+            pdfDoc = await load2(bytes, pwd);
+          }
+          if (rDoc)
+            rDoc.destroy();
+          rDoc = await loadForRender(bytes);
+          totalPages = pdfDoc.getPageCount();
+          countEl.textContent = `${totalPages} page${totalPages > 1 ? "s" : ""}`;
+          selected.clear();
+          lastClicked = -1;
+          setRotBtnsDisabled(false);
+          container.querySelector("#rot-ccw").disabled = true;
+          container.querySelector("#rot-cw").disabled = true;
+          container.querySelector("#rot-180").disabled = true;
+          updateSelStatus();
+          saveBtn.disabled = false;
+          gridPanel.style.display = "";
+          buildThumbnailGrid(rDoc, totalPages, gridEl, {
+            thumbWidth: 120,
+            onPageClick: (page0, el) => {
+            }
+          });
+          gridEl.addEventListener("click", (e) => {
+            const thumb = e.target.closest(".split-thumb");
+            if (!thumb)
+              return;
+            const p0 = parseInt(thumb.dataset.page) - 1;
+            if (e.shiftKey && lastClicked >= 0) {
+              const lo = Math.min(lastClicked, p0);
+              const hi = Math.max(lastClicked, p0);
+              for (let i = lo; i <= hi; i++)
+                selected.add(i);
+            } else if (e.ctrlKey || e.metaKey) {
+              selected.has(p0) ? selected.delete(p0) : selected.add(p0);
+            } else {
+              if (selected.size === 1 && selected.has(p0)) {
+                selected.clear();
+              } else {
+                selected.clear();
+                selected.add(p0);
+              }
+            }
+            lastClicked = p0;
+            syncGridSelection();
+          });
+        } catch (err) {
+          console.error(err);
+          toast("Failed to load PDF: " + err.message, "error");
+        } finally {
+          hideProgress();
+        }
+      }
+      const dropZone = container.querySelector("#rot-drop");
+      const input = container.querySelector("#rot-input");
+      dropZone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropZone.classList.add("drag-over");
+      });
+      dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag-over"));
+      dropZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropZone.classList.remove("drag-over");
+        const f = [...e.dataTransfer.files].find((f2) => f2.name.toLowerCase().endsWith(".pdf"));
+        if (f)
+          loadFile(f);
+      });
+      container.querySelector("#rot-browse").addEventListener("click", () => input.click());
+      input.addEventListener("change", (e) => {
+        if (e.target.files[0]) {
+          loadFile(e.target.files[0]);
+          input.value = "";
+        }
+      });
+      container.querySelector("#rot-sel-all").addEventListener("click", () => {
+        for (let i = 0; i < totalPages; i++)
+          selected.add(i);
+        syncGridSelection();
+      });
+      container.querySelector("#rot-sel-none").addEventListener("click", () => {
+        selected.clear();
+        syncGridSelection();
+      });
+      function applyRotation(angle) {
+        if (!pdfDoc || selected.size === 0)
+          return;
+        rotatePages(pdfDoc, [...selected], angle);
+        gridEl.querySelectorAll(".split-thumb").forEach((el) => {
+          const p0 = parseInt(el.dataset.page) - 1;
+          if (!selected.has(p0))
+            return;
+          el.style.outline = "2px solid var(--accent)";
+          setTimeout(() => {
+            el.style.outline = "";
+          }, 600);
+        });
+        toast(`Rotated ${selected.size} page${selected.size > 1 ? "s" : ""} by ${angle}\xB0`, "info", 2e3);
+      }
+      container.querySelector("#rot-ccw").addEventListener("click", () => applyRotation(270));
+      container.querySelector("#rot-cw").addEventListener("click", () => applyRotation(90));
+      container.querySelector("#rot-180").addEventListener("click", () => applyRotation(180));
+      container.querySelector("#rot-save").addEventListener("click", async () => {
+        if (!pdfDoc)
+          return;
+        showProgress("Saving\u2026");
+        try {
+          const outBytes = await save2(pdfDoc);
+          const outName = srcFile.name.replace(/\.pdf$/i, "_rotated.pdf");
+          await saveAs(outBytes, outName);
+          toast(`Saved \u2192 ${outName}`, "success");
+        } catch (err) {
+          console.error(err);
+          toast("Failed: " + err.message, "error");
+        } finally {
+          hideProgress();
+        }
+      });
+    }
+  });
+
+  // src/features/insert-pages.js
+  init_ui();
+  var PAGE_SIZES2 = {
+    "match": null,
+    // resolved at runtime
+    "a4": [595.28, 841.89],
+    "letter": [612, 792],
+    "a3": [841.89, 1190.55],
+    "a5": [419.53, 595.28]
+  };
+  registerFeature({
+    id: "insert-pages",
+    name: "Insert Blank Pages",
+    category: "Edit",
+    icon: "\u2795",
+    description: "Add blank pages at any position \u2014 signing pages, chapter dividers, padding",
+    render(container) {
+      container.innerHTML = `
+      <div class="feature-header">
+        <h2>Insert Blank Pages</h2>
+        <p class="feature-desc">
+          Add one or more blank pages before or after any page in the document.
+        </p>
+      </div>
+
+      <div class="panel">
+
+        <div class="section-label">Select PDF</div>
+        <div class="file-drop-zone" id="ins-drop">
+          Drag a PDF here, or
+          <button class="btn btn-sm" id="ins-browse">Browse</button>
+          <input type="file" id="ins-input" accept=".pdf" hidden>
+        </div>
+        <div id="ins-filename" class="file-name-display"></div>
+        <div id="ins-info" class="status-text" style="margin-top:4px;"></div>
+
+        <div class="section-label" style="margin-top:14px;">Position</div>
+
+        <div class="option-row">
+          <label>Insert</label>
+          <select id="ins-where" class="input" style="max-width:240px;">
+            <option value="before">Before page\u2026</option>
+            <option value="after">After page\u2026</option>
+            <option value="end" selected>At the end</option>
+          </select>
+        </div>
+
+        <div class="option-row" id="ins-page-row" style="display:none;">
+          <label>Page number</label>
+          <input type="number" id="ins-page-num" class="input" min="1" value="1"
+            style="max-width:100px;">
+          <span id="ins-page-hint" class="status-text"></span>
+        </div>
+
+        <div class="section-label" style="margin-top:14px;">Blank Pages</div>
+
+        <div class="option-row">
+          <label>Count</label>
+          <input type="number" id="ins-count" class="input" min="1" max="20" value="1"
+            style="max-width:100px;">
+        </div>
+
+        <div class="option-row">
+          <label>Page size</label>
+          <select id="ins-size" class="input" style="max-width:200px;">
+            <option value="match" selected>Match adjacent page</option>
+            <option value="a4">A4  (210 \xD7 297 mm)</option>
+            <option value="letter">US Letter  (8.5 \xD7 11 in)</option>
+            <option value="a3">A3  (297 \xD7 420 mm)</option>
+            <option value="a5">A5  (148 \xD7 210 mm)</option>
+          </select>
+        </div>
+
+        <div class="option-row">
+          <label>Orientation</label>
+          <select id="ins-orient" class="input" style="max-width:200px;">
+            <option value="portrait"  selected>Portrait</option>
+            <option value="landscape">Landscape</option>
+          </select>
+        </div>
+
+        <div class="action-bar">
+          <button class="btn btn-primary btn-lg" id="ins-run" disabled>Insert Pages</button>
+        </div>
+
+      </div>
+    `;
+      let srcFile = null;
+      let pdfDoc = null;
+      let totalPgs = 0;
+      const nameEl = container.querySelector("#ins-filename");
+      const infoEl = container.querySelector("#ins-info");
+      const runBtn = container.querySelector("#ins-run");
+      const whereEl = container.querySelector("#ins-where");
+      const pageRow = container.querySelector("#ins-page-row");
+      const pageNumEl = container.querySelector("#ins-page-num");
+      const pageHint = container.querySelector("#ins-page-hint");
+      whereEl.addEventListener("change", () => {
+        pageRow.style.display = whereEl.value === "end" ? "none" : "flex";
+      });
+      async function loadFile(file) {
+        srcFile = file;
+        nameEl.textContent = file.name;
+        showProgress("Loading\u2026");
+        try {
+          const bytes = await readFile(file);
+          try {
+            pdfDoc = await load2(bytes);
+          } catch (err) {
+            if (err.code !== "ENCRYPTED")
+              throw err;
+            hideProgress();
+            const pwd = await promptPassword(file.name);
+            if (!pwd)
+              return;
+            showProgress("Decrypting\u2026");
+            pdfDoc = await load2(bytes, pwd);
+          }
+          totalPgs = pdfDoc.getPageCount();
+          infoEl.textContent = `${totalPgs} page${totalPgs > 1 ? "s" : ""}`;
+          pageNumEl.max = totalPgs;
+          pageHint.textContent = `of ${totalPgs}`;
+          runBtn.disabled = false;
+        } catch (err) {
+          console.error(err);
+          toast("Failed to load: " + err.message, "error");
+        } finally {
+          hideProgress();
+        }
+      }
+      const dropZone = container.querySelector("#ins-drop");
+      const input = container.querySelector("#ins-input");
+      dropZone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropZone.classList.add("drag-over");
+      });
+      dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag-over"));
+      dropZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropZone.classList.remove("drag-over");
+        const f = [...e.dataTransfer.files].find((f2) => f2.name.toLowerCase().endsWith(".pdf"));
+        if (f)
+          loadFile(f);
+      });
+      container.querySelector("#ins-browse").addEventListener("click", () => input.click());
+      input.addEventListener("change", (e) => {
+        if (e.target.files[0]) {
+          loadFile(e.target.files[0]);
+          input.value = "";
+        }
+      });
+      runBtn.addEventListener("click", async () => {
+        if (!pdfDoc)
+          return;
+        const where = whereEl.value;
+        const count = Math.max(1, Math.min(20, parseInt(container.querySelector("#ins-count").value) || 1));
+        const sizeKey = container.querySelector("#ins-size").value;
+        const orient = container.querySelector("#ins-orient").value;
+        let insertIdx;
+        if (where === "end") {
+          insertIdx = totalPgs;
+        } else {
+          const pNum = Math.max(1, Math.min(totalPgs, parseInt(pageNumEl.value) || 1));
+          insertIdx = where === "before" ? pNum - 1 : pNum;
+        }
+        let [w, h];
+        if (sizeKey === "match") {
+          const adjIdx = Math.min(insertIdx, totalPgs - 1);
+          const adjPage = pdfDoc.getPage(adjIdx);
+          const sz = adjPage.getSize();
+          const rot = adjPage.getRotation().angle % 360;
+          const rotated = rot === 90 || rot === 270;
+          [w, h] = rotated ? [sz.height, sz.width] : [sz.width, sz.height];
+        } else {
+          ;
+          [w, h] = PAGE_SIZES2[sizeKey];
+        }
+        if (orient === "landscape" && h > w)
+          [w, h] = [h, w];
+        if (orient === "portrait" && w > h)
+          [w, h] = [h, w];
+        showProgress("Inserting blank pages\u2026");
+        try {
+          for (let i = 0; i < count; i++) {
+            pdfDoc.insertPage(insertIdx + i, [w, h]);
+          }
+          totalPgs = pdfDoc.getPageCount();
+          pageNumEl.max = totalPgs;
+          pageHint.textContent = `of ${totalPgs}`;
+          infoEl.textContent = `${totalPgs} page${totalPgs > 1 ? "s" : ""}`;
+          const outBytes = await save2(pdfDoc);
+          const outName = srcFile.name.replace(/\.pdf$/i, "_inserted.pdf");
+          await saveAs(outBytes, outName);
+          const pos = where === "end" ? "at the end" : `at position ${insertIdx + 1}`;
+          toast(
+            `Inserted ${count} blank page${count > 1 ? "s" : ""} ${pos} \u2192 ${outName}`,
+            "success"
+          );
+        } catch (err) {
+          console.error(err);
+          toast("Failed: " + err.message, "error");
+        } finally {
+          hideProgress();
+        }
+      });
+    }
+  });
+
+  // src/features/header-footer.js
+  init_es2();
+  init_ui();
+  registerFeature({
+    id: "header-footer",
+    name: "Header / Footer",
+    category: "Edit",
+    icon: "\u2195",
+    description: "Add custom text headers and footers with page numbers, dates and more",
+    render(container) {
+      container.innerHTML = `
+      <div class="feature-header">
+        <h2>Header / Footer</h2>
+        <p class="feature-desc">
+          Stamp custom text at the top and/or bottom of every page.
+          Tokens: <code>{n}</code> page number \xB7 <code>{total}</code> total pages \xB7
+          <code>{date}</code> today's date \xB7 <code>{title}</code> document title.
+        </p>
+      </div>
+
+      <div class="feature-split">
+
+        <!-- \u2500\u2500 Source \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 -->
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">\u2460 Source PDF</span></div>
+          <div class="file-drop-zone" id="hf-drop">
+            <span>Drag a PDF here, or</span>
+            <button class="btn btn-sm" id="hf-browse">Browse</button>
+            <input type="file" id="hf-input" accept=".pdf" hidden>
+          </div>
+          <div id="hf-filename" class="file-name-display"></div>
+          <div id="hf-info" class="status-text" style="margin-top:4px;"></div>
+
+          <div class="section-label" style="margin-top:14px;">Apply to Pages</div>
+          <div class="option-row">
+            <label>Pages</label>
+            <select id="hf-pages-sel" class="input" style="max-width:180px;">
+              <option value="all">All pages</option>
+              <option value="custom">Custom range\u2026</option>
+            </select>
+          </div>
+          <div id="hf-pages-row" class="option-row" style="display:none;">
+            <label>Range</label>
+            <input type="text" id="hf-pages-custom" class="input"
+              placeholder="e.g. 2-10, 15" style="max-width:200px;">
+          </div>
+          <div class="option-row">
+            <label>Skip first page</label>
+            <input type="checkbox" id="hf-skip-first" style="width:auto;">
+            <span class="status-text" style="margin-left:4px;">(e.g. cover page)</span>
+          </div>
+        </div>
+
+        <!-- \u2500\u2500 Header \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 -->
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">\u2461 Header</span>
+            <label style="font-size:12px;display:flex;align-items:center;gap:6px;font-weight:normal;">
+              <input type="checkbox" id="hf-header-on"> Enable
+            </label>
+          </div>
+
+          <div id="hf-header-opts" style="opacity:.4;pointer-events:none;">
+            <div class="option-row">
+              <label>Text</label>
+              <input type="text" id="hf-header-text" class="input" placeholder="{title}" value="{title}">
+            </div>
+            <div class="option-row">
+              <label>Alignment</label>
+              <select id="hf-header-align" class="input" style="max-width:140px;">
+                <option value="left">Left</option>
+                <option value="center" selected>Center</option>
+                <option value="right">Right</option>
+              </select>
+            </div>
+            <div class="option-row">
+              <label>Font size (pt)</label>
+              <input type="number" id="hf-header-size" class="input" min="6" max="36" value="9"
+                style="max-width:80px;">
+            </div>
+            <div class="option-row">
+              <label>Margin (pt)</label>
+              <input type="number" id="hf-header-margin" class="input" min="4" max="72" value="20"
+                style="max-width:80px;">
+            </div>
+            <div class="option-row">
+              <label>Colour</label>
+              <input type="color" id="hf-header-color" value="#555555"
+                style="width:48px;height:32px;padding:2px;border:1px solid var(--border);border-radius:4px;background:none;cursor:pointer;">
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="feature-split" style="margin-top:0;">
+
+        <!-- \u2500\u2500 Footer \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 -->
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">\u2462 Footer</span>
+            <label style="font-size:12px;display:flex;align-items:center;gap:6px;font-weight:normal;">
+              <input type="checkbox" id="hf-footer-on" checked> Enable
+            </label>
+          </div>
+
+          <div id="hf-footer-opts">
+            <div class="option-row">
+              <label>Text</label>
+              <input type="text" id="hf-footer-text" class="input" placeholder="{n} of {total}" value="{n} of {total}">
+            </div>
+            <div class="option-row">
+              <label>Alignment</label>
+              <select id="hf-footer-align" class="input" style="max-width:140px;">
+                <option value="left">Left</option>
+                <option value="center" selected>Center</option>
+                <option value="right">Right</option>
+              </select>
+            </div>
+            <div class="option-row">
+              <label>Font size (pt)</label>
+              <input type="number" id="hf-footer-size" class="input" min="6" max="36" value="9"
+                style="max-width:80px;">
+            </div>
+            <div class="option-row">
+              <label>Margin (pt)</label>
+              <input type="number" id="hf-footer-margin" class="input" min="4" max="72" value="20"
+                style="max-width:80px;">
+            </div>
+            <div class="option-row">
+              <label>Colour</label>
+              <input type="color" id="hf-footer-color" value="#555555"
+                style="width:48px;height:32px;padding:2px;border:1px solid var(--border);border-radius:4px;background:none;cursor:pointer;">
+            </div>
+          </div>
+        </div>
+
+        <!-- \u2500\u2500 Save \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 -->
+        <div class="panel" style="display:flex;flex-direction:column;justify-content:flex-end;">
+          <div class="action-bar" style="margin-top:0;">
+            <button class="btn btn-primary btn-lg" id="hf-run" disabled
+              style="width:100%;justify-content:center;">
+              Apply Header / Footer
+            </button>
+          </div>
+        </div>
+
+      </div>
+    `;
+      let srcFile = null;
+      container.querySelector("#hf-header-on").addEventListener("change", (e) => {
+        container.querySelector("#hf-header-opts").style.cssText = e.target.checked ? "" : "opacity:.4;pointer-events:none;";
+      });
+      container.querySelector("#hf-footer-on").addEventListener("change", (e) => {
+        container.querySelector("#hf-footer-opts").style.cssText = e.target.checked ? "" : "opacity:.4;pointer-events:none;";
+      });
+      container.querySelector("#hf-footer-opts").style.cssText = "";
+      container.querySelector("#hf-pages-sel").addEventListener("change", (e) => {
+        container.querySelector("#hf-pages-row").style.display = e.target.value === "custom" ? "flex" : "none";
+      });
+      const dropZone = container.querySelector("#hf-drop");
+      const input = container.querySelector("#hf-input");
+      const nameEl = container.querySelector("#hf-filename");
+      const infoEl = container.querySelector("#hf-info");
+      const runBtn = container.querySelector("#hf-run");
+      async function loadFile(file) {
+        srcFile = file;
+        nameEl.textContent = file.name;
+        showProgress("Loading\u2026");
+        try {
+          const bytes = await readFile(file);
+          const doc = await load2(bytes).catch(async (err) => {
+            if (err.code !== "ENCRYPTED")
+              throw err;
+            hideProgress();
+            const pwd = await promptPassword(file.name);
+            if (!pwd)
+              throw Object.assign(new Error("Cancelled"), { name: "AbortError" });
+            showProgress("Decrypting\u2026");
+            return load2(bytes, pwd);
+          });
+          const n = doc.getPageCount();
+          infoEl.textContent = `${n} page${n > 1 ? "s" : ""} \u2014 "${doc.getTitle() || "(no title)"}"`;
+          runBtn.disabled = false;
+        } catch (err) {
+          if (err.name !== "AbortError")
+            toast("Failed to load: " + err.message, "error");
+        } finally {
+          hideProgress();
+        }
+      }
+      dropZone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropZone.classList.add("drag-over");
+      });
+      dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag-over"));
+      dropZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropZone.classList.remove("drag-over");
+        const f = [...e.dataTransfer.files].find((f2) => f2.name.toLowerCase().endsWith(".pdf"));
+        if (f)
+          loadFile(f);
+      });
+      container.querySelector("#hf-browse").addEventListener("click", () => input.click());
+      input.addEventListener("change", (e) => {
+        if (e.target.files[0]) {
+          loadFile(e.target.files[0]);
+          input.value = "";
+        }
+      });
+      runBtn.addEventListener("click", async () => {
+        const headerOn = container.querySelector("#hf-header-on").checked;
+        const footerOn = container.querySelector("#hf-footer-on").checked;
+        if (!srcFile || !headerOn && !footerOn) {
+          toast("Enable at least one of Header or Footer.", "warning");
+          return;
+        }
+        showProgress("Loading PDF\u2026");
+        try {
+          let hexToRgb = function(hex) {
+            const r = parseInt(hex.slice(1, 3), 16) / 255;
+            const g = parseInt(hex.slice(3, 5), 16) / 255;
+            const b = parseInt(hex.slice(5, 7), 16) / 255;
+            return rgb(r, g, b);
+          }, resolveToken = function(tpl, n) {
+            return tpl.replace(/\{n\}/g, String(n)).replace(/\{total\}/g, String(total)).replace(/\{date\}/g, today).replace(/\{title\}/g, docTitle);
+          };
+          const bytes = await readFile(srcFile);
+          let doc;
+          try {
+            doc = await load2(bytes);
+          } catch (err) {
+            if (err.code !== "ENCRYPTED")
+              throw err;
+            hideProgress();
+            const pwd = await promptPassword(srcFile.name);
+            if (!pwd)
+              return;
+            showProgress("Decrypting\u2026");
+            doc = await load2(bytes, pwd);
+          }
+          const font = await doc.embedFont(StandardFonts.Helvetica);
+          const pages = doc.getPages();
+          const total = pages.length;
+          const docTitle = doc.getTitle() || "";
+          const today = (/* @__PURE__ */ new Date()).toLocaleDateString();
+          const skipFirst = container.querySelector("#hf-skip-first").checked;
+          let targetIdx;
+          if (container.querySelector("#hf-pages-sel").value === "custom") {
+            const raw = container.querySelector("#hf-pages-custom").value.trim();
+            targetIdx = parsePageRange(raw, total);
+          } else {
+            targetIdx = pages.map((_, i) => i);
+          }
+          if (skipFirst)
+            targetIdx = targetIdx.filter((i) => i !== 0);
+          if (!targetIdx.length) {
+            toast("No pages to stamp.", "warning");
+            return;
+          }
+          let counter = 1;
+          for (const i of targetIdx) {
+            const page = pages[i];
+            const { width, height } = page.getSize();
+            const stamp = (text, align, size, margin, colorHex, top) => {
+              if (!text.trim())
+                return;
+              const resolved = resolveToken(text, skipFirst ? i : counter);
+              const tw = font.widthOfTextAtSize(resolved, size);
+              let x;
+              if (align === "left")
+                x = margin;
+              else if (align === "right")
+                x = width - tw - margin;
+              else
+                x = (width - tw) / 2;
+              const y = top ? height - margin - size : margin;
+              page.drawText(resolved, { x, y, size, font, color: hexToRgb(colorHex) });
+            };
+            if (headerOn)
+              stamp(
+                container.querySelector("#hf-header-text").value,
+                container.querySelector("#hf-header-align").value,
+                parseFloat(container.querySelector("#hf-header-size").value) || 9,
+                parseFloat(container.querySelector("#hf-header-margin").value) || 20,
+                container.querySelector("#hf-header-color").value,
+                true
+              );
+            if (footerOn)
+              stamp(
+                container.querySelector("#hf-footer-text").value,
+                container.querySelector("#hf-footer-align").value,
+                parseFloat(container.querySelector("#hf-footer-size").value) || 9,
+                parseFloat(container.querySelector("#hf-footer-margin").value) || 20,
+                container.querySelector("#hf-footer-color").value,
+                false
+              );
+            counter++;
+          }
+          const outBytes = await save2(doc);
+          const outName = srcFile.name.replace(/\.pdf$/i, "_hf.pdf");
+          await saveAs(outBytes, outName);
+          toast(`Stamped ${targetIdx.length} page${targetIdx.length > 1 ? "s" : ""} \u2192 ${outName}`, "success");
+        } catch (err) {
+          if (err.name !== "AbortError") {
+            console.error(err);
+            toast("Failed: " + err.message, "error");
+          }
+        } finally {
+          hideProgress();
+        }
+      });
+    }
+  });
+
+  // src/features/bates.js
+  init_es2();
+  init_ui();
+  var POSITIONS = {
+    "bottom-right": { v: "bottom", h: "right" },
+    "bottom-center": { v: "bottom", h: "center" },
+    "bottom-left": { v: "bottom", h: "left" },
+    "top-right": { v: "top", h: "right" },
+    "top-center": { v: "top", h: "center" },
+    "top-left": { v: "top", h: "left" }
+  };
+  registerFeature({
+    id: "bates",
+    name: "Bates Numbering",
+    category: "Edit",
+    icon: "#",
+    description: "Stamp sequential Bates reference numbers (PROD000001\u2026) onto pages",
+    render(container) {
+      container.innerHTML = `
+      <div class="feature-header">
+        <h2>Bates Numbering</h2>
+        <p class="feature-desc">
+          Stamp sequential reference numbers onto each page.
+          Format: <strong>Prefix + zero-padded number + Suffix</strong>
+          &nbsp;\u2014 e.g. <code>PROD000001</code> or <code>ABC-000123-DEF</code>.
+        </p>
+      </div>
+
+      <div class="feature-split">
+
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">\u2460 Source PDF</span></div>
+          <div class="file-drop-zone" id="bt-drop">
+            <span>Drag a PDF here, or</span>
+            <button class="btn btn-sm" id="bt-browse">Browse</button>
+            <input type="file" id="bt-input" accept=".pdf" hidden>
+          </div>
+          <div id="bt-filename" class="file-name-display"></div>
+          <div id="bt-info" class="status-text" style="margin-top:4px;"></div>
+
+          <div class="section-label" style="margin-top:14px;">Pages</div>
+          <div class="option-row">
+            <label>Apply to</label>
+            <select id="bt-pages-sel" class="input" style="max-width:180px;">
+              <option value="all">All pages</option>
+              <option value="custom">Custom range\u2026</option>
+            </select>
+          </div>
+          <div id="bt-pages-row" class="option-row" style="display:none;">
+            <label>Range</label>
+            <input type="text" id="bt-pages-custom" class="input"
+              placeholder="e.g. 1-5, 8" style="max-width:200px;">
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">\u2461 Numbering Format</span></div>
+
+          <div class="option-row">
+            <label>Prefix</label>
+            <input type="text" id="bt-prefix" class="input" placeholder="e.g. PROD" value="PROD"
+              style="max-width:160px;">
+          </div>
+          <div class="option-row">
+            <label>Start number</label>
+            <input type="number" id="bt-start" class="input" min="0" value="1"
+              style="max-width:110px;">
+          </div>
+          <div class="option-row">
+            <label>Digits (padding)</label>
+            <input type="number" id="bt-pad" class="input" min="1" max="12" value="6"
+              style="max-width:80px;">
+          </div>
+          <div class="option-row">
+            <label>Suffix</label>
+            <input type="text" id="bt-suffix" class="input" placeholder="(optional)"
+              style="max-width:160px;">
+          </div>
+
+          <div id="bt-preview-row" class="option-row" style="flex-direction:column;align-items:flex-start;gap:4px;">
+            <label>Preview</label>
+            <code id="bt-preview" style="font-size:14px;color:var(--text);"></code>
+          </div>
+
+          <div class="section-label" style="margin-top:14px;">Appearance</div>
+          <div class="option-row">
+            <label>Position</label>
+            <select id="bt-pos" class="input" style="max-width:200px;">
+              <option value="bottom-right" selected>Bottom right</option>
+              <option value="bottom-center">Bottom center</option>
+              <option value="bottom-left">Bottom left</option>
+              <option value="top-right">Top right</option>
+              <option value="top-center">Top center</option>
+              <option value="top-left">Top left</option>
+            </select>
+          </div>
+          <div class="option-row">
+            <label>Font size (pt)</label>
+            <input type="number" id="bt-size" class="input" min="6" max="24" value="8"
+              style="max-width:80px;">
+          </div>
+          <div class="option-row">
+            <label>Margin (pt)</label>
+            <input type="number" id="bt-margin" class="input" min="4" max="72" value="18"
+              style="max-width:80px;">
+          </div>
+          <div class="option-row">
+            <label>Colour</label>
+            <input type="color" id="bt-color" value="#000000"
+              style="width:48px;height:32px;padding:2px;border:1px solid var(--border);border-radius:4px;background:none;cursor:pointer;">
+          </div>
+
+          <div class="action-bar">
+            <button class="btn btn-primary btn-lg" id="bt-run" disabled>Stamp Bates Numbers</button>
+          </div>
+        </div>
+
+      </div>
+    `;
+      let srcFile = null;
+      const previewEl = container.querySelector("#bt-preview");
+      function updatePreview() {
+        const prefix = container.querySelector("#bt-prefix").value;
+        const start = parseInt(container.querySelector("#bt-start").value) || 1;
+        const pad = parseInt(container.querySelector("#bt-pad").value) || 6;
+        const suffix = container.querySelector("#bt-suffix").value;
+        previewEl.textContent = `${prefix}${String(start).padStart(pad, "0")}${suffix}`;
+      }
+      ;
+      ["#bt-prefix", "#bt-start", "#bt-pad", "#bt-suffix"].forEach((id) => {
+        container.querySelector(id).addEventListener("input", updatePreview);
+      });
+      updatePreview();
+      container.querySelector("#bt-pages-sel").addEventListener("change", (e) => {
+        container.querySelector("#bt-pages-row").style.display = e.target.value === "custom" ? "flex" : "none";
+      });
+      const dropZone = container.querySelector("#bt-drop");
+      const input = container.querySelector("#bt-input");
+      const nameEl = container.querySelector("#bt-filename");
+      const infoEl = container.querySelector("#bt-info");
+      const runBtn = container.querySelector("#bt-run");
+      async function loadFile(file) {
+        srcFile = file;
+        nameEl.textContent = file.name;
+        showProgress("Loading\u2026");
+        try {
+          const bytes = await readFile(file);
+          const doc = await load2(bytes).catch(async (err) => {
+            if (err.code !== "ENCRYPTED")
+              throw err;
+            hideProgress();
+            const pwd = await promptPassword(file.name);
+            if (!pwd)
+              throw Object.assign(new Error("Cancelled"), { name: "AbortError" });
+            showProgress("Decrypting\u2026");
+            return load2(bytes, pwd);
+          });
+          const n = doc.getPageCount();
+          infoEl.textContent = `${n} page${n > 1 ? "s" : ""}`;
+          runBtn.disabled = false;
+        } catch (err) {
+          if (err.name !== "AbortError")
+            toast("Failed to load: " + err.message, "error");
+        } finally {
+          hideProgress();
+        }
+      }
+      dropZone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropZone.classList.add("drag-over");
+      });
+      dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag-over"));
+      dropZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropZone.classList.remove("drag-over");
+        const f = [...e.dataTransfer.files].find((f2) => f2.name.toLowerCase().endsWith(".pdf"));
+        if (f)
+          loadFile(f);
+      });
+      container.querySelector("#bt-browse").addEventListener("click", () => input.click());
+      input.addEventListener("change", (e) => {
+        if (e.target.files[0]) {
+          loadFile(e.target.files[0]);
+          input.value = "";
+        }
+      });
+      runBtn.addEventListener("click", async () => {
+        if (!srcFile)
+          return;
+        showProgress("Loading PDF\u2026");
+        try {
+          const bytes = await readFile(srcFile);
+          let doc;
+          try {
+            doc = await load2(bytes);
+          } catch (err) {
+            if (err.code !== "ENCRYPTED")
+              throw err;
+            hideProgress();
+            const pwd = await promptPassword(srcFile.name);
+            if (!pwd)
+              return;
+            showProgress("Decrypting\u2026");
+            doc = await load2(bytes, pwd);
+          }
+          const font = await doc.embedFont(StandardFonts.Courier);
+          const pages = doc.getPages();
+          const total = pages.length;
+          const prefix = container.querySelector("#bt-prefix").value;
+          const start = parseInt(container.querySelector("#bt-start").value) || 1;
+          const pad = parseInt(container.querySelector("#bt-pad").value) || 6;
+          const suffix = container.querySelector("#bt-suffix").value;
+          const posKey = container.querySelector("#bt-pos").value;
+          const size = parseFloat(container.querySelector("#bt-size").value) || 8;
+          const margin = parseFloat(container.querySelector("#bt-margin").value) || 18;
+          const hex = container.querySelector("#bt-color").value;
+          const colorRgb = rgb(
+            parseInt(hex.slice(1, 3), 16) / 255,
+            parseInt(hex.slice(3, 5), 16) / 255,
+            parseInt(hex.slice(5, 7), 16) / 255
+          );
+          const { v, h } = POSITIONS[posKey] || POSITIONS["bottom-right"];
+          let targetIdx;
+          if (container.querySelector("#bt-pages-sel").value === "custom") {
+            const raw = container.querySelector("#bt-pages-custom").value.trim();
+            targetIdx = parsePageRange(raw, total);
+          } else {
+            targetIdx = pages.map((_, i) => i);
+          }
+          let counter = start;
+          for (const i of targetIdx) {
+            const page = pages[i];
+            const { width, height } = page.getSize();
+            const label = `${prefix}${String(counter).padStart(pad, "0")}${suffix}`;
+            const tw = font.widthOfTextAtSize(label, size);
+            let x;
+            if (h === "left")
+              x = margin;
+            else if (h === "right")
+              x = width - tw - margin;
+            else
+              x = (width - tw) / 2;
+            const y = v === "top" ? height - margin - size : margin;
+            page.drawText(label, { x, y, size, font, color: colorRgb });
+            counter++;
+          }
+          const outBytes = await save2(doc);
+          const outName = srcFile.name.replace(/\.pdf$/i, "_bates.pdf");
+          await saveAs(outBytes, outName);
+          toast(`Stamped ${targetIdx.length} pages \u2014 numbers ${prefix}${String(start).padStart(pad, "0")} \u2026 ${prefix}${String(counter - 1).padStart(pad, "0")} \u2192 ${outName}`, "success", 5e3);
+        } catch (err) {
+          if (err.name !== "AbortError") {
+            console.error(err);
+            toast("Failed: " + err.message, "error");
+          }
+        } finally {
+          hideProgress();
+        }
+      });
+    }
+  });
+
+  // src/features/sign.js
+  init_ui();
+  var PT_PER_MM2 = 72 / 25.4;
+  registerFeature({
+    id: "sign",
+    name: "Sign PDF",
+    category: "Edit",
+    icon: "\u270D",
+    description: "Draw or upload a signature and stamp it onto PDF pages",
+    render(container) {
+      container.innerHTML = `
+      <div class="feature-header">
+        <h2>Sign PDF</h2>
+        <p class="feature-desc">
+          Draw a signature or upload an image, then place it on any page.
+        </p>
+      </div>
+
+      <div class="feature-split">
+
+        <!-- \u2500\u2500 Left: source + signature \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 -->
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">\u2460 Source PDF</span></div>
+          <div class="file-drop-zone" id="sg-drop">
+            <span>Drag a PDF here, or</span>
+            <button class="btn btn-sm" id="sg-browse">Browse</button>
+            <input type="file" id="sg-input" accept=".pdf" hidden>
+          </div>
+          <div id="sg-filename" class="file-name-display"></div>
+          <div id="sg-info" class="status-text" style="margin-top:4px;"></div>
+
+          <div class="section-label" style="margin-top:16px;">\u2461 Signature</div>
+
+          <!-- Mode tabs -->
+          <div style="display:flex;gap:6px;margin-bottom:10px;">
+            <button class="btn btn-sm" id="sg-mode-draw" style="font-weight:bold;">\u270F Draw</button>
+            <button class="btn btn-sm" id="sg-mode-upload">\u2B06 Upload image</button>
+          </div>
+
+          <!-- Draw panel -->
+          <div id="sg-draw-panel">
+            <div style="position:relative;border:1px solid var(--border);border-radius:var(--radius-sm);background:#fff;touch-action:none;">
+              <canvas id="sg-canvas" width="400" height="150"
+                style="display:block;width:100%;cursor:crosshair;border-radius:var(--radius-sm);"></canvas>
+              <span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+                color:#ccc;font-size:13px;pointer-events:none;" id="sg-placeholder">
+                Sign here
+              </span>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:8px;align-items:center;">
+              <button class="btn btn-sm" id="sg-clear">Clear</button>
+              <label style="font-size:12px;color:var(--text-muted);">Colour</label>
+              <input type="color" id="sg-ink" value="#000000"
+                style="width:36px;height:28px;padding:2px;border:1px solid var(--border);border-radius:4px;background:none;cursor:pointer;">
+              <label style="font-size:12px;color:var(--text-muted);">Thickness</label>
+              <input type="range" id="sg-thickness" min="1" max="8" value="2" style="width:80px;">
+            </div>
+          </div>
+
+          <!-- Upload panel -->
+          <div id="sg-upload-panel" style="display:none;">
+            <div class="file-drop-zone" id="sg-img-drop" style="min-height:80px;">
+              <span>Drag PNG/JPEG here, or</span>
+              <button class="btn btn-sm" id="sg-img-browse">Browse</button>
+              <input type="file" id="sg-img-input" accept="image/png,image/jpeg" hidden>
+            </div>
+            <div style="margin-top:8px;text-align:center;">
+              <img id="sg-img-preview" style="max-height:120px;max-width:100%;display:none;border:1px solid var(--border);border-radius:4px;">
+            </div>
+          </div>
+        </div>
+
+        <!-- \u2500\u2500 Right: placement + save \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 -->
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">\u2462 Placement</span></div>
+
+          <div class="option-row">
+            <label>Apply to pages</label>
+            <select id="sg-pages-sel" class="input" style="max-width:180px;">
+              <option value="all">All pages</option>
+              <option value="first" selected>First page only</option>
+              <option value="last">Last page only</option>
+              <option value="custom">Custom range\u2026</option>
+            </select>
+          </div>
+          <div id="sg-pages-row" class="option-row" style="display:none;">
+            <label>Range</label>
+            <input type="text" id="sg-pages-custom" class="input"
+              placeholder="e.g. 3, 5-7" style="max-width:180px;">
+          </div>
+
+          <div class="option-row">
+            <label>Position</label>
+            <select id="sg-pos" class="input" style="max-width:200px;">
+              <option value="bottom-right" selected>Bottom right</option>
+              <option value="bottom-left">Bottom left</option>
+              <option value="bottom-center">Bottom center</option>
+              <option value="top-right">Top right</option>
+              <option value="top-left">Top left</option>
+              <option value="top-center">Top center</option>
+              <option value="center">Center</option>
+            </select>
+          </div>
+
+          <div class="option-row">
+            <label>Width (mm)</label>
+            <input type="number" id="sg-width-mm" class="input" min="10" max="200" value="60"
+              style="max-width:90px;">
+            <span class="status-text">height auto-scales</span>
+          </div>
+
+          <div class="option-row">
+            <label>Offset X (mm)</label>
+            <input type="number" id="sg-off-x" class="input" value="10"
+              style="max-width:90px;">
+          </div>
+          <div class="option-row">
+            <label>Offset Y (mm)</label>
+            <input type="number" id="sg-off-y" class="input" value="10"
+              style="max-width:90px;">
+          </div>
+          <div class="option-row">
+            <label>Opacity</label>
+            <input type="range" id="sg-opacity" min="10" max="100" value="100" style="flex:1;">
+            <span id="sg-opacity-val" style="min-width:36px;font-size:12px;color:var(--text-muted);">100%</span>
+          </div>
+
+          <div class="action-bar" style="margin-top:20px;">
+            <button class="btn btn-primary btn-lg" id="sg-run" disabled
+              style="width:100%;justify-content:center;">
+              Apply Signature
+            </button>
+          </div>
+
+          <p style="font-size:11px;color:var(--text-subtle);margin-top:12px;line-height:1.6;">
+            \u2139 The signature is drawn directly on the page as a static image.
+            It is visible in all PDF viewers. For legally binding e-signatures
+            (PKI/certificate-based), use dedicated signing software.
+          </p>
+        </div>
+
+      </div>
+    `;
+      let srcFile = null;
+      let sigPngBytes = null;
+      const drawPanel = container.querySelector("#sg-draw-panel");
+      const uploadPanel = container.querySelector("#sg-upload-panel");
+      container.querySelector("#sg-mode-draw").addEventListener("click", () => {
+        drawPanel.style.display = "";
+        uploadPanel.style.display = "none";
+        container.querySelector("#sg-mode-draw").style.fontWeight = "bold";
+        container.querySelector("#sg-mode-upload").style.fontWeight = "";
+      });
+      container.querySelector("#sg-mode-upload").addEventListener("click", () => {
+        drawPanel.style.display = "none";
+        uploadPanel.style.display = "";
+        container.querySelector("#sg-mode-draw").style.fontWeight = "";
+        container.querySelector("#sg-mode-upload").style.fontWeight = "bold";
+      });
+      const canvas = container.querySelector("#sg-canvas");
+      const ctx = canvas.getContext("2d");
+      const placeholder = container.querySelector("#sg-placeholder");
+      let drawing = false;
+      let hasDrawing = false;
+      function getPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        const src = e.touches ? e.touches[0] : e;
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        return [(src.clientX - rect.left) * scaleX, (src.clientY - rect.top) * scaleY];
+      }
+      canvas.addEventListener("mousedown", (e) => {
+        drawing = true;
+        ctx.beginPath();
+        ctx.moveTo(...getPos(e));
+      });
+      canvas.addEventListener("mousemove", (e) => {
+        if (!drawing)
+          return;
+        placeholder.style.display = "none";
+        hasDrawing = true;
+        ctx.strokeStyle = container.querySelector("#sg-ink").value;
+        ctx.lineWidth = parseFloat(container.querySelector("#sg-thickness").value);
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.lineTo(...getPos(e));
+        ctx.stroke();
+      });
+      canvas.addEventListener("mouseup", () => {
+        drawing = false;
+      });
+      canvas.addEventListener("mouseleave", () => {
+        drawing = false;
+      });
+      canvas.addEventListener("touchstart", (e) => {
+        e.preventDefault();
+        drawing = true;
+        ctx.beginPath();
+        ctx.moveTo(...getPos(e));
+      }, { passive: false });
+      canvas.addEventListener("touchmove", (e) => {
+        e.preventDefault();
+        if (!drawing)
+          return;
+        placeholder.style.display = "none";
+        hasDrawing = true;
+        ctx.strokeStyle = container.querySelector("#sg-ink").value;
+        ctx.lineWidth = parseFloat(container.querySelector("#sg-thickness").value);
+        ctx.lineCap = "round";
+        ctx.lineTo(...getPos(e));
+        ctx.stroke();
+      }, { passive: false });
+      canvas.addEventListener("touchend", () => {
+        drawing = false;
+      });
+      container.querySelector("#sg-clear").addEventListener("click", () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        placeholder.style.display = "";
+        hasDrawing = false;
+      });
+      function loadSigImage(file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = container.querySelector("#sg-img-preview");
+          img.src = e.target.result;
+          img.style.display = "";
+        };
+        reader.readAsDataURL(file);
+      }
+      const imgDropZone = container.querySelector("#sg-img-drop");
+      imgDropZone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        imgDropZone.classList.add("drag-over");
+      });
+      imgDropZone.addEventListener("dragleave", () => imgDropZone.classList.remove("drag-over"));
+      imgDropZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        imgDropZone.classList.remove("drag-over");
+        const f = [...e.dataTransfer.files].find((f2) => f2.type.startsWith("image/"));
+        if (f)
+          loadSigImage(f);
+      });
+      container.querySelector("#sg-img-browse").addEventListener("click", () => container.querySelector("#sg-img-input").click());
+      container.querySelector("#sg-img-input").addEventListener("change", (e) => {
+        if (e.target.files[0]) {
+          loadSigImage(e.target.files[0]);
+          e.target.value = "";
+        }
+      });
+      const opacitySlider = container.querySelector("#sg-opacity");
+      const opacityVal = container.querySelector("#sg-opacity-val");
+      opacitySlider.addEventListener("input", () => {
+        opacityVal.textContent = opacitySlider.value + "%";
+      });
+      container.querySelector("#sg-pages-sel").addEventListener("change", (e) => {
+        container.querySelector("#sg-pages-row").style.display = e.target.value === "custom" ? "flex" : "none";
+      });
+      const dropZone = container.querySelector("#sg-drop");
+      const input = container.querySelector("#sg-input");
+      const nameEl = container.querySelector("#sg-filename");
+      const infoEl = container.querySelector("#sg-info");
+      const runBtn = container.querySelector("#sg-run");
+      async function loadFile(file) {
+        srcFile = file;
+        nameEl.textContent = file.name;
+        showProgress("Loading\u2026");
+        try {
+          const bytes = await readFile(file);
+          const doc = await load2(bytes).catch(async (err) => {
+            if (err.code !== "ENCRYPTED")
+              throw err;
+            hideProgress();
+            const pwd = await promptPassword(file.name);
+            if (!pwd)
+              throw Object.assign(new Error("Cancelled"), { name: "AbortError" });
+            showProgress("Decrypting\u2026");
+            return load2(bytes, pwd);
+          });
+          const n = doc.getPageCount();
+          infoEl.textContent = `${n} page${n > 1 ? "s" : ""}`;
+          runBtn.disabled = false;
+        } catch (err) {
+          if (err.name !== "AbortError")
+            toast("Failed to load: " + err.message, "error");
+        } finally {
+          hideProgress();
+        }
+      }
+      dropZone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropZone.classList.add("drag-over");
+      });
+      dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag-over"));
+      dropZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropZone.classList.remove("drag-over");
+        const f = [...e.dataTransfer.files].find((f2) => f2.name.toLowerCase().endsWith(".pdf"));
+        if (f)
+          loadFile(f);
+      });
+      container.querySelector("#sg-browse").addEventListener("click", () => input.click());
+      input.addEventListener("change", (e) => {
+        if (e.target.files[0]) {
+          loadFile(e.target.files[0]);
+          input.value = "";
+        }
+      });
+      async function captureSig() {
+        const mode = drawPanel.style.display === "none" ? "upload" : "draw";
+        if (mode === "draw") {
+          if (!hasDrawing)
+            throw new Error("Please draw a signature first.");
+          return new Promise((resolve, reject) => {
+            canvas.toBlob((blob) => {
+              if (!blob) {
+                reject(new Error("Failed to capture canvas"));
+                return;
+              }
+              blob.arrayBuffer().then((ab) => resolve(new Uint8Array(ab)));
+            }, "image/png");
+          });
+        } else {
+          const img = container.querySelector("#sg-img-preview");
+          if (!img.src || !img.style.display)
+            throw new Error("Please upload a signature image first.");
+          const resp = await fetch(img.src);
+          const ab = await resp.arrayBuffer();
+          return new Uint8Array(ab);
+        }
+      }
+      runBtn.addEventListener("click", async () => {
+        if (!srcFile)
+          return;
+        let sigBytes;
+        try {
+          sigBytes = await captureSig();
+        } catch (err) {
+          toast(err.message, "warning");
+          return;
+        }
+        showProgress("Loading PDF\u2026");
+        try {
+          const bytes = await readFile(srcFile);
+          let doc;
+          try {
+            doc = await load2(bytes);
+          } catch (err) {
+            if (err.code !== "ENCRYPTED")
+              throw err;
+            hideProgress();
+            const pwd = await promptPassword(srcFile.name);
+            if (!pwd)
+              return;
+            showProgress("Decrypting\u2026");
+            doc = await load2(bytes, pwd);
+          }
+          const embedded = await doc.embedPng(sigBytes);
+          const totalPgs = doc.getPageCount();
+          const widthMm = parseFloat(container.querySelector("#sg-width-mm").value) || 60;
+          const offXmm = parseFloat(container.querySelector("#sg-off-x").value) ?? 10;
+          const offYmm = parseFloat(container.querySelector("#sg-off-y").value) ?? 10;
+          const opacity = parseInt(opacitySlider.value) / 100;
+          const posKey = container.querySelector("#sg-pos").value;
+          let targetIdx;
+          const pagesSel = container.querySelector("#sg-pages-sel").value;
+          if (pagesSel === "first")
+            targetIdx = [0];
+          else if (pagesSel === "last")
+            targetIdx = [totalPgs - 1];
+          else if (pagesSel === "custom") {
+            const raw = container.querySelector("#sg-pages-custom").value.trim();
+            targetIdx = parsePageRange(raw, totalPgs);
+          } else {
+            targetIdx = doc.getPages().map((_, i) => i);
+          }
+          for (const i of targetIdx) {
+            const page = doc.getPage(i);
+            const { width, height } = page.getSize();
+            const sigW = widthMm * PT_PER_MM2;
+            const sigH = sigW * (embedded.height / embedded.width);
+            const offX = offXmm * PT_PER_MM2;
+            const offY = offYmm * PT_PER_MM2;
+            let x, y;
+            const [vSide, hSide] = (() => {
+              if (posKey === "center")
+                return ["center", "center"];
+              return posKey.split("-");
+            })();
+            if (hSide === "left")
+              x = offX;
+            else if (hSide === "right")
+              x = width - sigW - offX;
+            else
+              x = (width - sigW) / 2;
+            if (vSide === "top")
+              y = height - sigH - offY;
+            else if (vSide === "bottom")
+              y = offY;
+            else
+              y = (height - sigH) / 2;
+            page.drawImage(embedded, { x, y, width: sigW, height: sigH, opacity });
+          }
+          const outBytes = await save2(doc);
+          const outName = srcFile.name.replace(/\.pdf$/i, "_signed.pdf");
+          await saveAs(outBytes, outName);
+          toast(`Signed ${targetIdx.length} page${targetIdx.length > 1 ? "s" : ""} \u2192 ${outName}`, "success");
+        } catch (err) {
+          if (err.name !== "AbortError") {
+            console.error(err);
+            toast("Failed: " + err.message, "error");
+          }
+        } finally {
+          hideProgress();
+        }
+      });
+    }
+  });
+
+  // src/features/redact.js
+  init_es2();
+  init_ui();
+  var BLACK = rgb(0, 0, 0);
+  registerFeature({
+    id: "redact",
+    name: "Redact",
+    category: "Security",
+    icon: "\u2B1B",
+    description: "Draw black boxes over sensitive text or images on any page",
+    render(container) {
+      container.innerHTML = `
+      <div class="feature-header">
+        <h2>Redact</h2>
+        <p class="feature-desc">
+          Draw redaction boxes on the page preview below, then click Apply.
+          For permanent removal of sensitive data, also run <strong>Flatten to Images</strong> afterward.
+        </p>
+      </div>
+
+      <div class="feature-split">
+
+        <!-- \u2500\u2500 Left: source + page nav \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 -->
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">\u2460 Source PDF</span></div>
+          <div class="file-drop-zone" id="rd-drop">
+            <span>Drag a PDF here, or</span>
+            <button class="btn btn-sm" id="rd-browse">Browse</button>
+            <input type="file" id="rd-input" accept=".pdf" hidden>
+          </div>
+          <div id="rd-filename" class="file-name-display"></div>
+
+          <div id="rd-nav" style="display:none;margin-top:14px;">
+            <div class="section-label">Page</div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+              <button class="btn btn-sm" id="rd-prev">\u2039 Prev</button>
+              <span id="rd-page-label" style="font-size:13px;min-width:80px;text-align:center;"></span>
+              <button class="btn btn-sm" id="rd-next">Next \u203A</button>
+            </div>
+            <div class="status-text" id="rd-box-count"></div>
+
+            <div style="display:flex;gap:6px;margin-top:10px;">
+              <button class="btn btn-sm" id="rd-undo">\u21A9 Undo last</button>
+              <button class="btn btn-sm" id="rd-clear-page">Clear page</button>
+              <button class="btn btn-sm" id="rd-clear-all">Clear all</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- \u2500\u2500 Right: save \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 -->
+        <div class="panel" style="display:flex;flex-direction:column;justify-content:flex-end;">
+          <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;font-size:13px;color:var(--text-muted);line-height:1.6;">
+            <strong style="color:var(--text);">How to redact</strong><br>
+            1. Click and drag on the page preview to draw a black box.<br>
+            2. Repeat for all areas you want covered.<br>
+            3. Navigate pages using Prev / Next.<br>
+            4. Click Apply Redactions.<br><br>
+            <strong style="color:var(--text);">For truly permanent redaction</strong><br>
+            Also run <em>Flatten to Images</em> on the result.
+            Flattening rasterizes the page, so the data underneath the
+            black boxes is gone \u2014 not just hidden.
+          </div>
+          <div class="action-bar" style="margin-top:14px;">
+            <button class="btn btn-primary btn-lg" id="rd-run" disabled
+              style="width:100%;justify-content:center;">
+              Apply Redactions
+            </button>
+            <div class="status-text" id="rd-status" style="text-align:center;margin-top:6px;"></div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- \u2500\u2500 Preview canvas \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 -->
+      <div class="panel" id="rd-preview-panel" style="display:none;margin-top:0;">
+        <div class="panel-header">
+          <span class="panel-title">Draw redaction boxes</span>
+          <span class="status-text">Click and drag to add a black box</span>
+        </div>
+        <div style="position:relative;display:inline-block;max-width:100%;cursor:crosshair;"
+          id="rd-canvas-wrap">
+          <canvas id="rd-canvas" style="display:block;max-width:100%;border:1px solid var(--border);border-radius:var(--radius-sm);"></canvas>
+          <!-- SVG overlay for drawn boxes -->
+          <svg id="rd-svg" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;"></svg>
+          <!-- Drag rect during drawing -->
+          <div id="rd-drag-rect" style="display:none;position:absolute;border:2px solid #ef4444;background:rgba(239,68,68,0.25);pointer-events:none;"></div>
+        </div>
+      </div>
+    `;
+      let srcBytes = null;
+      let rDoc = null;
+      let totalPgs = 0;
+      let curPage = 1;
+      let scale2 = 1;
+      let pageW = 1;
+      let pageH = 1;
+      const boxes = {};
+      const nameEl = container.querySelector("#rd-filename");
+      const navEl = container.querySelector("#rd-nav");
+      const pageLbl = container.querySelector("#rd-page-label");
+      const boxCount = container.querySelector("#rd-box-count");
+      const statusEl = container.querySelector("#rd-status");
+      const runBtn = container.querySelector("#rd-run");
+      const prevBtn = container.querySelector("#rd-prev");
+      const nextBtn = container.querySelector("#rd-next");
+      const previewPanel = container.querySelector("#rd-preview-panel");
+      const canvas = container.querySelector("#rd-canvas");
+      const ctx = canvas.getContext("2d");
+      const svg = container.querySelector("#rd-svg");
+      const dragRect = container.querySelector("#rd-drag-rect");
+      const wrap = container.querySelector("#rd-canvas-wrap");
+      async function renderCurPage() {
+        if (!rDoc)
+          return;
+        const page = await rDoc.getPage(curPage);
+        const viewport = page.getViewport({ scale: 1 });
+        pageW = viewport.width;
+        pageH = viewport.height;
+        const maxW = Math.min(700, wrap.parentElement?.clientWidth || 700);
+        scale2 = maxW / pageW;
+        const vp = page.getViewport({ scale: scale2 });
+        canvas.width = Math.round(vp.width);
+        canvas.height = Math.round(vp.height);
+        await page.render({ canvasContext: ctx, viewport: vp }).promise;
+        page.cleanup();
+        svg.setAttribute("viewBox", `0 0 ${canvas.width} ${canvas.height}`);
+        drawOverlay();
+        pageLbl.textContent = `Page ${curPage} of ${totalPgs}`;
+        prevBtn.disabled = curPage <= 1;
+        nextBtn.disabled = curPage >= totalPgs;
+        updateBoxCount();
+      }
+      function drawOverlay() {
+        svg.innerHTML = "";
+        const pg = boxes[curPage] || [];
+        for (const b of pg) {
+          const cx2 = b.x / (pageW / canvas.width);
+          const cy2 = (pageH - b.y - b.h) / (pageH / canvas.height);
+          const cw = b.w / (pageW / canvas.width);
+          const ch = b.h / (pageH / canvas.height);
+          const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+          rect.setAttribute("x", cx2);
+          rect.setAttribute("y", cy2);
+          rect.setAttribute("width", cw);
+          rect.setAttribute("height", ch);
+          rect.setAttribute("fill", "black");
+          svg.appendChild(rect);
+        }
+      }
+      function updateBoxCount() {
+        const all = Object.values(boxes).reduce((s, a) => s + a.length, 0);
+        const pg = (boxes[curPage] || []).length;
+        boxCount.textContent = `${pg} box${pg !== 1 ? "es" : ""} on this page \xB7 ${all} total`;
+        const n = Object.values(boxes).reduce((s, a) => s + a.length, 0);
+        statusEl.textContent = n ? `${n} redaction${n > 1 ? "s" : ""} ready to apply` : "";
+      }
+      let dragging = false;
+      let dragStart = null;
+      function canvasCoords(e) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        const src = e.touches ? e.touches[0] : e;
+        return {
+          x: (src.clientX - rect.left) * scaleX,
+          y: (src.clientY - rect.top) * scaleY
+        };
+      }
+      function showDragRect(x1, y1, x2, y2) {
+        const rect = canvas.getBoundingClientRect();
+        const wrap2 = canvas.parentElement.getBoundingClientRect();
+        const scaleX = rect.width / canvas.width;
+        const scaleY = rect.height / canvas.height;
+        const lx = Math.min(x1, x2) * scaleX + (rect.left - wrap2.left);
+        const ly = Math.min(y1, y2) * scaleY + (rect.top - wrap2.top);
+        const lw = Math.abs(x2 - x1) * scaleX;
+        const lh = Math.abs(y2 - y1) * scaleY;
+        dragRect.style.cssText = `
+        display:block;position:absolute;
+        left:${lx}px;top:${ly}px;width:${lw}px;height:${lh}px;
+        border:2px solid #ef4444;background:rgba(239,68,68,0.25);pointer-events:none;
+      `;
+      }
+      canvas.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        dragging = true;
+        dragStart = canvasCoords(e);
+      });
+      window.addEventListener("mousemove", (e) => {
+        if (!dragging || !dragStart)
+          return;
+        const cur = canvasCoords(e);
+        showDragRect(dragStart.x, dragStart.y, cur.x, cur.y);
+      });
+      window.addEventListener("mouseup", (e) => {
+        if (!dragging || !dragStart)
+          return;
+        dragging = false;
+        const cur = canvasCoords(e);
+        dragRect.style.display = "none";
+        commitBox(dragStart, cur);
+        dragStart = null;
+      });
+      canvas.addEventListener("touchstart", (e) => {
+        e.preventDefault();
+        dragging = true;
+        dragStart = canvasCoords(e);
+      }, { passive: false });
+      window.addEventListener("touchmove", (e) => {
+        if (!dragging || !dragStart)
+          return;
+        const cur = canvasCoords(e);
+        showDragRect(dragStart.x, dragStart.y, cur.x, cur.y);
+      });
+      window.addEventListener("touchend", (e) => {
+        if (!dragging || !dragStart)
+          return;
+        dragging = false;
+        const changedTouch = e.changedTouches[0];
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        const cur = {
+          x: (changedTouch.clientX - rect.left) * scaleX,
+          y: (changedTouch.clientY - rect.top) * scaleY
+        };
+        dragRect.style.display = "none";
+        commitBox(dragStart, cur);
+        dragStart = null;
+      });
+      function commitBox(start, end) {
+        const cw = canvas.width;
+        const ch = canvas.height;
+        const x1 = Math.max(0, Math.min(start.x, end.x, cw));
+        const y1 = Math.max(0, Math.min(start.y, end.y, ch));
+        const x2 = Math.min(cw, Math.max(start.x, end.x, 0));
+        const y2 = Math.min(ch, Math.max(start.y, end.y, 0));
+        const bw = x2 - x1;
+        const bh = y2 - y1;
+        if (bw < 4 || bh < 4)
+          return;
+        const pdfX = x1 / cw * pageW;
+        const pdfY = (ch - y2) / ch * pageH;
+        const pdfW = bw / cw * pageW;
+        const pdfH = bh / ch * pageH;
+        if (!boxes[curPage])
+          boxes[curPage] = [];
+        boxes[curPage].push({ x: pdfX, y: pdfY, w: pdfW, h: pdfH });
+        drawOverlay();
+        updateBoxCount();
+      }
+      container.querySelector("#rd-undo").addEventListener("click", () => {
+        if (boxes[curPage]?.length) {
+          boxes[curPage].pop();
+          drawOverlay();
+          updateBoxCount();
+        }
+      });
+      container.querySelector("#rd-clear-page").addEventListener("click", () => {
+        boxes[curPage] = [];
+        drawOverlay();
+        updateBoxCount();
+      });
+      container.querySelector("#rd-clear-all").addEventListener("click", () => {
+        Object.keys(boxes).forEach((k) => delete boxes[k]);
+        drawOverlay();
+        updateBoxCount();
+      });
+      prevBtn.addEventListener("click", () => {
+        if (curPage > 1) {
+          curPage--;
+          renderCurPage();
+        }
+      });
+      nextBtn.addEventListener("click", () => {
+        if (curPage < totalPgs) {
+          curPage++;
+          renderCurPage();
+        }
+      });
+      async function loadFile(file) {
+        nameEl.textContent = file.name;
+        showProgress("Loading PDF\u2026");
+        try {
+          srcBytes = await readFile(file);
+          if (rDoc)
+            rDoc.destroy();
+          try {
+            rDoc = await loadForRender(srcBytes);
+          } catch (err) {
+            if (err.code !== "ENCRYPTED")
+              throw err;
+            hideProgress();
+            const pwd = await promptPassword(file.name);
+            if (!pwd)
+              return;
+            showProgress("Decrypting\u2026");
+            rDoc = await loadForRender(srcBytes, pwd);
+          }
+          totalPgs = rDoc.numPages;
+          curPage = 1;
+          Object.keys(boxes).forEach((k) => delete boxes[k]);
+          navEl.style.display = "";
+          previewPanel.style.display = "";
+          runBtn.disabled = false;
+          await renderCurPage();
+        } catch (err) {
+          console.error(err);
+          toast("Failed to load: " + err.message, "error");
+        } finally {
+          hideProgress();
+        }
+      }
+      const dropZone = container.querySelector("#rd-drop");
+      const input = container.querySelector("#rd-input");
+      dropZone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropZone.classList.add("drag-over");
+      });
+      dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag-over"));
+      dropZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropZone.classList.remove("drag-over");
+        const f = [...e.dataTransfer.files].find((f2) => f2.name.toLowerCase().endsWith(".pdf"));
+        if (f)
+          loadFile(f);
+      });
+      container.querySelector("#rd-browse").addEventListener("click", () => input.click());
+      input.addEventListener("change", (e) => {
+        if (e.target.files[0]) {
+          loadFile(e.target.files[0]);
+          input.value = "";
+        }
+      });
+      runBtn.addEventListener("click", async () => {
+        const totalBoxes = Object.values(boxes).reduce((s, a) => s + a.length, 0);
+        if (totalBoxes === 0) {
+          toast("Draw at least one redaction box first.", "warning");
+          return;
+        }
+        showProgress("Loading PDF\u2026");
+        try {
+          let doc;
+          try {
+            doc = await load2(srcBytes);
+          } catch (err) {
+            if (err.code !== "ENCRYPTED")
+              throw err;
+            hideProgress();
+            const pwd = await promptPassword(nameEl.textContent);
+            if (!pwd)
+              return;
+            showProgress("Decrypting\u2026");
+            doc = await load2(srcBytes, pwd);
+          }
+          const pages = doc.getPages();
+          let applied = 0;
+          for (const [pageNumStr, rects] of Object.entries(boxes)) {
+            const page = pages[parseInt(pageNumStr) - 1];
+            if (!page || !rects.length)
+              continue;
+            const { width, height } = page.getSize();
+            for (const b of rects) {
+              page.drawRectangle({
+                x: b.x,
+                y: b.y,
+                width: b.w,
+                height: b.h,
+                color: BLACK,
+                opacity: 1,
+                borderWidth: 0
+              });
+              applied++;
+            }
+          }
+          updateProgress("Saving\u2026");
+          const outBytes = await save2(doc);
+          const outName = nameEl.textContent.replace(/\.pdf$/i, "_redacted.pdf");
+          await saveAs(outBytes, outName);
+          toast(`${applied} area${applied > 1 ? "s" : ""} redacted \u2192 ${outName}`, "success", 5e3);
+        } catch (err) {
+          if (err.name !== "AbortError") {
+            console.error(err);
+            toast("Failed: " + err.message, "error");
+          }
+        } finally {
+          hideProgress();
+        }
+      });
+    }
+  });
+
+  // src/features/n-up.js
+  init_es2();
+  init_ui();
+  var SHEET_SIZES = {
+    "a4-landscape": [841.89, 595.28],
+    "a4-portrait": [595.28, 841.89],
+    "letter-landscape": [792, 612],
+    "letter-portrait": [612, 792],
+    "a3-landscape": [1190.55, 841.89],
+    "a3-portrait": [841.89, 1190.55]
+  };
+  registerFeature({
+    id: "n-up",
+    name: "N-up / Imposition",
+    category: "Edit",
+    icon: "\u229E",
+    description: "2-up or 4-up: place multiple pages per sheet for printing",
+    render(container) {
+      container.innerHTML = `
+      <div class="feature-header">
+        <h2>N-up / Imposition</h2>
+        <p class="feature-desc">
+          Arrange multiple PDF pages onto a single sheet \u2014 useful for
+          printing drafts, handouts, or saddle-stitch booklets.
+        </p>
+      </div>
+
+      <div class="feature-split">
+
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">\u2460 Source PDF</span></div>
+          <div class="file-drop-zone" id="nu-drop">
+            <span>Drag a PDF here, or</span>
+            <button class="btn btn-sm" id="nu-browse">Browse</button>
+            <input type="file" id="nu-input" accept=".pdf" hidden>
+          </div>
+          <div id="nu-filename" class="file-name-display"></div>
+          <div id="nu-info" class="status-text" style="margin-top:4px;"></div>
+
+          <div class="section-label" style="margin-top:14px;">Pages</div>
+          <div class="option-row">
+            <label>Source pages</label>
+            <select id="nu-pages-sel" class="input" style="max-width:180px;">
+              <option value="all">All pages</option>
+              <option value="custom">Custom range\u2026</option>
+            </select>
+          </div>
+          <div id="nu-pages-row" class="option-row" style="display:none;">
+            <label>Range</label>
+            <input type="text" id="nu-pages-custom" class="input"
+              placeholder="e.g. 1-8, 12" style="max-width:200px;">
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">\u2461 Layout</span></div>
+
+          <div class="option-row">
+            <label>Layout</label>
+            <select id="nu-layout" class="input" style="max-width:220px;">
+              <option value="2up" selected>2-up  (side by side)</option>
+              <option value="4up">4-up  (2\xD72 grid)</option>
+              <option value="booklet">Booklet  (2-up, saddle-stitch order)</option>
+            </select>
+          </div>
+
+          <div class="option-row">
+            <label>Sheet size</label>
+            <select id="nu-sheet" class="input" style="max-width:220px;">
+              <option value="a4-landscape"     selected>A4 Landscape</option>
+              <option value="a4-portrait">A4 Portrait</option>
+              <option value="letter-landscape">Letter Landscape</option>
+              <option value="letter-portrait">Letter Portrait</option>
+              <option value="a3-landscape">A3 Landscape</option>
+              <option value="a3-portrait">A3 Portrait</option>
+            </select>
+          </div>
+
+          <div class="option-row">
+            <label>Gutter (mm)</label>
+            <input type="number" id="nu-gutter" class="input" min="0" max="30" value="4"
+              style="max-width:80px;">
+            <span class="status-text">gap between pages</span>
+          </div>
+
+          <div class="option-row">
+            <label>Margin (mm)</label>
+            <input type="number" id="nu-margin" class="input" min="0" max="30" value="4"
+              style="max-width:80px;">
+            <span class="status-text">sheet edge</span>
+          </div>
+
+          <div class="option-row">
+            <label>Draw borders</label>
+            <input type="checkbox" id="nu-border" style="width:auto;">
+          </div>
+
+          <div class="action-bar">
+            <button class="btn btn-primary btn-lg" id="nu-run" disabled
+              style="width:100%;justify-content:center;">
+              Create N-up PDF
+            </button>
+          </div>
+        </div>
+
+      </div>
+    `;
+      let srcFile = null;
+      const dropZone = container.querySelector("#nu-drop");
+      const input = container.querySelector("#nu-input");
+      const nameEl = container.querySelector("#nu-filename");
+      const infoEl = container.querySelector("#nu-info");
+      const runBtn = container.querySelector("#nu-run");
+      async function loadFile(file) {
+        srcFile = file;
+        nameEl.textContent = file.name;
+        showProgress("Loading\u2026");
+        try {
+          const bytes = await readFile(file);
+          const doc = await load2(bytes).catch(async (err) => {
+            if (err.code !== "ENCRYPTED")
+              throw err;
+            hideProgress();
+            const pwd = await promptPassword(file.name);
+            if (!pwd)
+              throw Object.assign(new Error("Cancelled"), { name: "AbortError" });
+            showProgress("Decrypting\u2026");
+            return load2(bytes, pwd);
+          });
+          const n = doc.getPageCount();
+          infoEl.textContent = `${n} page${n > 1 ? "s" : ""}`;
+          runBtn.disabled = false;
+        } catch (err) {
+          if (err.name !== "AbortError")
+            toast("Failed to load: " + err.message, "error");
+        } finally {
+          hideProgress();
+        }
+      }
+      dropZone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropZone.classList.add("drag-over");
+      });
+      dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag-over"));
+      dropZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropZone.classList.remove("drag-over");
+        const f = [...e.dataTransfer.files].find((f2) => f2.name.toLowerCase().endsWith(".pdf"));
+        if (f)
+          loadFile(f);
+      });
+      container.querySelector("#nu-browse").addEventListener("click", () => input.click());
+      input.addEventListener("change", (e) => {
+        if (e.target.files[0]) {
+          loadFile(e.target.files[0]);
+          input.value = "";
+        }
+      });
+      container.querySelector("#nu-pages-sel").addEventListener("change", (e) => {
+        container.querySelector("#nu-pages-row").style.display = e.target.value === "custom" ? "flex" : "none";
+      });
+      runBtn.addEventListener("click", async () => {
+        if (!srcFile)
+          return;
+        showProgress("Loading PDF\u2026");
+        try {
+          const bytes = await readFile(srcFile);
+          let srcDoc;
+          try {
+            srcDoc = await load2(bytes);
+          } catch (err) {
+            if (err.code !== "ENCRYPTED")
+              throw err;
+            hideProgress();
+            const pwd = await promptPassword(srcFile.name);
+            if (!pwd)
+              return;
+            showProgress("Decrypting\u2026");
+            srcDoc = await load2(bytes, pwd);
+          }
+          const totalSrc = srcDoc.getPageCount();
+          const layout = container.querySelector("#nu-layout").value;
+          const sheetKey = container.querySelector("#nu-sheet").value;
+          const gutterMm = parseFloat(container.querySelector("#nu-gutter").value) || 0;
+          const marginMm = parseFloat(container.querySelector("#nu-margin").value) || 0;
+          const drawBord = container.querySelector("#nu-border").checked;
+          const PT_PER_MM3 = 72 / 25.4;
+          const gutter = gutterMm * PT_PER_MM3;
+          const margin = marginMm * PT_PER_MM3;
+          let srcPageIdx;
+          if (container.querySelector("#nu-pages-sel").value === "custom") {
+            const raw = container.querySelector("#nu-pages-custom").value.trim();
+            srcPageIdx = parsePageRange(raw, totalSrc);
+          } else {
+            srcPageIdx = Array.from({ length: totalSrc }, (_, i) => i);
+          }
+          const [sheetW, sheetH] = SHEET_SIZES[sheetKey];
+          const perSheet = layout === "4up" ? 4 : 2;
+          let orderedIdx;
+          if (layout === "booklet") {
+            const padded = [...srcPageIdx];
+            while (padded.length % 4 !== 0)
+              padded.push(null);
+            orderedIdx = [];
+            let lo = 0, hi = padded.length - 1;
+            while (lo < hi) {
+              orderedIdx.push(hi--, lo++, lo++, hi--);
+            }
+          } else {
+            orderedIdx = [...srcPageIdx];
+          }
+          while (orderedIdx.length % perSheet !== 0)
+            orderedIdx.push(null);
+          updateProgress("Embedding pages\u2026");
+          const outDoc = await PDFDocument.create();
+          const srcPages = srcDoc.getPages();
+          const embedded = /* @__PURE__ */ new Map();
+          for (const idx of new Set(orderedIdx.filter((i) => i !== null))) {
+            embedded.set(idx, await outDoc.embedPage(srcPages[idx]));
+          }
+          const numSheets = orderedIdx.length / perSheet;
+          for (let s = 0; s < numSheets; s++) {
+            updateProgress(`Building sheet ${s + 1} of ${numSheets}\u2026`);
+            const sheet = outDoc.addPage([sheetW, sheetH]);
+            const pageSet = orderedIdx.slice(s * perSheet, (s + 1) * perSheet);
+            let cols, rows;
+            if (perSheet === 2) {
+              cols = 2;
+              rows = 1;
+            } else {
+              cols = 2;
+              rows = 2;
+            }
+            const cellW = (sheetW - 2 * margin - (cols - 1) * gutter) / cols;
+            const cellH = (sheetH - 2 * margin - (rows - 1) * gutter) / rows;
+            for (let ci = 0; ci < perSheet; ci++) {
+              const srcIdx = pageSet[ci];
+              const col = ci % cols;
+              const row = Math.floor(ci / cols);
+              const cellX = margin + col * (cellW + gutter);
+              const cellY = sheetH - margin - (row + 1) * cellH - row * gutter;
+              if (srcIdx === null)
+                continue;
+              const emb = embedded.get(srcIdx);
+              const orig = srcPages[srcIdx];
+              const { width: origW, height: origH } = orig.getSize();
+              const scaleX = cellW / origW;
+              const scaleY = cellH / origH;
+              const fit = Math.min(scaleX, scaleY);
+              const drawnW = origW * fit;
+              const drawnH = origH * fit;
+              const offX = (cellW - drawnW) / 2;
+              const offY = (cellH - drawnH) / 2;
+              sheet.drawPage(emb, {
+                x: cellX + offX,
+                y: cellY + offY,
+                width: drawnW,
+                height: drawnH
+              });
+              if (drawBord) {
+                sheet.drawRectangle({
+                  x: cellX,
+                  y: cellY,
+                  width: cellW,
+                  height: cellH,
+                  borderColor: { type: "RGB", red: 0.7, green: 0.7, blue: 0.7 },
+                  borderWidth: 0.5,
+                  color: void 0
+                });
+              }
+            }
+          }
+          updateProgress("Saving\u2026");
+          const outBytes = await outDoc.save();
+          const suffix = layout === "booklet" ? "_booklet" : `_${layout}`;
+          const outName = srcFile.name.replace(/\.pdf$/i, `${suffix}.pdf`);
+          await saveAs(outBytes, outName);
+          const n = orderedIdx.filter((i) => i !== null).length;
+          toast(
+            `${numSheets} sheet${numSheets > 1 ? "s" : ""} \xB7 ${n} pages placed \u2192 ${outName}`,
+            "success"
+          );
+        } catch (err) {
+          if (err.name !== "AbortError") {
+            console.error(err);
+            toast("Failed: " + err.message, "error");
+          }
+        } finally {
+          hideProgress();
+        }
+      });
+    }
+  });
+
   // src/core/app.js
   function navigate(featureId) {
     const feature = getFeature(featureId);
@@ -70225,7 +72341,7 @@ ${trimmed}`);
   }
   function stampVersion() {
     document.querySelectorAll(".sidebar-version").forEach((el) => {
-      if (el.textContent.includes("1.7.0"))
+      if (el.textContent.includes("2.0.0"))
         el.textContent = "dev";
     });
   }
