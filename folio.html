@@ -1018,7 +1018,7 @@ small { font-size: 12px; color: var(--text-muted); }
     <aside class="sidebar">
       <div class="sidebar-header">
         <span class="sidebar-logo">Folio</span>
-        <span class="sidebar-version">v2.1.0</span>
+        <span class="sidebar-version">v2.2.0</span>
       </div>
       <nav id="feature-nav" class="feature-nav"></nav>
       <div class="sidebar-footer">
@@ -2552,7 +2552,7 @@ small { font-size: 12px; color: var(--text-muted); }
         return table;
       }
       var crcTable = makeTable();
-      function crc32(crc, buf, len, pos) {
+      function crc322(crc, buf, len, pos) {
         var t = crcTable, end = pos + len;
         crc ^= -1;
         for (var i = pos; i < end; i++) {
@@ -2560,7 +2560,7 @@ small { font-size: 12px; color: var(--text-muted); }
         }
         return crc ^ -1;
       }
-      module.exports = crc32;
+      module.exports = crc322;
     }
   });
 
@@ -2598,7 +2598,7 @@ small { font-size: 12px; color: var(--text-muted); }
       var utils = require_common();
       var trees = require_trees();
       var adler32 = require_adler32();
-      var crc32 = require_crc32();
+      var crc322 = require_crc32();
       var msg = require_messages();
       var Z_NO_FLUSH = 0;
       var Z_PARTIAL_FLUSH = 1;
@@ -2701,7 +2701,7 @@ small { font-size: 12px; color: var(--text-muted); }
         if (strm.state.wrap === 1) {
           strm.adler = adler32(strm.adler, buf, len, start);
         } else if (strm.state.wrap === 2) {
-          strm.adler = crc32(strm.adler, buf, len, start);
+          strm.adler = crc322(strm.adler, buf, len, start);
         }
         strm.next_in += len;
         strm.total_in += len;
@@ -3343,7 +3343,7 @@ small { font-size: 12px; color: var(--text-muted); }
                 put_byte(s, s.gzhead.extra.length >> 8 & 255);
               }
               if (s.gzhead.hcrc) {
-                strm.adler = crc32(strm.adler, s.pending_buf, s.pending, 0);
+                strm.adler = crc322(strm.adler, s.pending_buf, s.pending, 0);
               }
               s.gzindex = 0;
               s.status = EXTRA_STATE;
@@ -3380,7 +3380,7 @@ small { font-size: 12px; color: var(--text-muted); }
             while (s.gzindex < (s.gzhead.extra.length & 65535)) {
               if (s.pending === s.pending_buf_size) {
                 if (s.gzhead.hcrc && s.pending > beg) {
-                  strm.adler = crc32(strm.adler, s.pending_buf, s.pending - beg, beg);
+                  strm.adler = crc322(strm.adler, s.pending_buf, s.pending - beg, beg);
                 }
                 flush_pending(strm);
                 beg = s.pending;
@@ -3392,7 +3392,7 @@ small { font-size: 12px; color: var(--text-muted); }
               s.gzindex++;
             }
             if (s.gzhead.hcrc && s.pending > beg) {
-              strm.adler = crc32(strm.adler, s.pending_buf, s.pending - beg, beg);
+              strm.adler = crc322(strm.adler, s.pending_buf, s.pending - beg, beg);
             }
             if (s.gzindex === s.gzhead.extra.length) {
               s.gzindex = 0;
@@ -3408,7 +3408,7 @@ small { font-size: 12px; color: var(--text-muted); }
             do {
               if (s.pending === s.pending_buf_size) {
                 if (s.gzhead.hcrc && s.pending > beg) {
-                  strm.adler = crc32(strm.adler, s.pending_buf, s.pending - beg, beg);
+                  strm.adler = crc322(strm.adler, s.pending_buf, s.pending - beg, beg);
                 }
                 flush_pending(strm);
                 beg = s.pending;
@@ -3425,7 +3425,7 @@ small { font-size: 12px; color: var(--text-muted); }
               put_byte(s, val);
             } while (val !== 0);
             if (s.gzhead.hcrc && s.pending > beg) {
-              strm.adler = crc32(strm.adler, s.pending_buf, s.pending - beg, beg);
+              strm.adler = crc322(strm.adler, s.pending_buf, s.pending - beg, beg);
             }
             if (val === 0) {
               s.gzindex = 0;
@@ -3441,7 +3441,7 @@ small { font-size: 12px; color: var(--text-muted); }
             do {
               if (s.pending === s.pending_buf_size) {
                 if (s.gzhead.hcrc && s.pending > beg) {
-                  strm.adler = crc32(strm.adler, s.pending_buf, s.pending - beg, beg);
+                  strm.adler = crc322(strm.adler, s.pending_buf, s.pending - beg, beg);
                 }
                 flush_pending(strm);
                 beg = s.pending;
@@ -3458,7 +3458,7 @@ small { font-size: 12px; color: var(--text-muted); }
               put_byte(s, val);
             } while (val !== 0);
             if (s.gzhead.hcrc && s.pending > beg) {
-              strm.adler = crc32(strm.adler, s.pending_buf, s.pending - beg, beg);
+              strm.adler = crc322(strm.adler, s.pending_buf, s.pending - beg, beg);
             }
             if (val === 0) {
               s.status = HCRC_STATE;
@@ -4517,7 +4517,7 @@ small { font-size: 12px; color: var(--text-muted); }
       "use strict";
       var utils = require_common();
       var adler32 = require_adler32();
-      var crc32 = require_crc32();
+      var crc322 = require_crc32();
       var inflate_fast = require_inffast();
       var inflate_table = require_inftrees();
       var CODES = 0;
@@ -4821,7 +4821,7 @@ small { font-size: 12px; color: var(--text-muted); }
                   state.check = 0;
                   hbuf[0] = hold & 255;
                   hbuf[1] = hold >>> 8 & 255;
-                  state.check = crc32(state.check, hbuf, 2, 0);
+                  state.check = crc322(state.check, hbuf, 2, 0);
                   hold = 0;
                   bits = 0;
                   state.mode = FLAGS;
@@ -4884,7 +4884,7 @@ small { font-size: 12px; color: var(--text-muted); }
                 if (state.flags & 512) {
                   hbuf[0] = hold & 255;
                   hbuf[1] = hold >>> 8 & 255;
-                  state.check = crc32(state.check, hbuf, 2, 0);
+                  state.check = crc322(state.check, hbuf, 2, 0);
                 }
                 hold = 0;
                 bits = 0;
@@ -4906,7 +4906,7 @@ small { font-size: 12px; color: var(--text-muted); }
                   hbuf[1] = hold >>> 8 & 255;
                   hbuf[2] = hold >>> 16 & 255;
                   hbuf[3] = hold >>> 24 & 255;
-                  state.check = crc32(state.check, hbuf, 4, 0);
+                  state.check = crc322(state.check, hbuf, 4, 0);
                 }
                 hold = 0;
                 bits = 0;
@@ -4927,7 +4927,7 @@ small { font-size: 12px; color: var(--text-muted); }
                 if (state.flags & 512) {
                   hbuf[0] = hold & 255;
                   hbuf[1] = hold >>> 8 & 255;
-                  state.check = crc32(state.check, hbuf, 2, 0);
+                  state.check = crc322(state.check, hbuf, 2, 0);
                 }
                 hold = 0;
                 bits = 0;
@@ -4949,7 +4949,7 @@ small { font-size: 12px; color: var(--text-muted); }
                   if (state.flags & 512) {
                     hbuf[0] = hold & 255;
                     hbuf[1] = hold >>> 8 & 255;
-                    state.check = crc32(state.check, hbuf, 2, 0);
+                    state.check = crc322(state.check, hbuf, 2, 0);
                   }
                   hold = 0;
                   bits = 0;
@@ -4981,7 +4981,7 @@ small { font-size: 12px; color: var(--text-muted); }
                       );
                     }
                     if (state.flags & 512) {
-                      state.check = crc32(state.check, input, copy, next);
+                      state.check = crc322(state.check, input, copy, next);
                     }
                     have -= copy;
                     next += copy;
@@ -5006,7 +5006,7 @@ small { font-size: 12px; color: var(--text-muted); }
                     }
                   } while (len && copy < have);
                   if (state.flags & 512) {
-                    state.check = crc32(state.check, input, copy, next);
+                    state.check = crc322(state.check, input, copy, next);
                   }
                   have -= copy;
                   next += copy;
@@ -5031,7 +5031,7 @@ small { font-size: 12px; color: var(--text-muted); }
                     }
                   } while (len && copy < have);
                   if (state.flags & 512) {
-                    state.check = crc32(state.check, input, copy, next);
+                    state.check = crc322(state.check, input, copy, next);
                   }
                   have -= copy;
                   next += copy;
@@ -5592,7 +5592,7 @@ small { font-size: 12px; color: var(--text-muted); }
                   state.total += _out;
                   if (_out) {
                     strm.adler = state.check = /*UPDATE(state.check, put - _out, _out);*/
-                    state.flags ? crc32(state.check, output, _out, put - _out) : adler32(state.check, output, _out, put - _out);
+                    state.flags ? crc322(state.check, output, _out, put - _out) : adler32(state.check, output, _out, put - _out);
                   }
                   _out = left;
                   if ((state.flags ? hold : zswap32(hold)) !== state.check) {
@@ -5655,7 +5655,7 @@ small { font-size: 12px; color: var(--text-muted); }
         state.total += _out;
         if (state.wrap && _out) {
           strm.adler = state.check = /*UPDATE(state.check, strm.next_out - _out, _out);*/
-          state.flags ? crc32(state.check, output, _out, strm.next_out - _out) : adler32(state.check, output, _out, strm.next_out - _out);
+          state.flags ? crc322(state.check, output, _out, strm.next_out - _out) : adler32(state.check, output, _out, strm.next_out - _out);
         }
         strm.data_type = state.bits + (state.last ? 64 : 0) + (state.mode === TYPE ? 128 : 0) + (state.mode === LEN_ || state.mode === COPY_ ? 256 : 0);
         if ((_in === 0 && _out === 0 || flush === Z_FINISH) && ret === Z_OK) {
@@ -34800,8 +34800,8 @@ end`;
           }
           return k.subarray(0, 32);
         }
-        hash(password, concatBytes, userBytes) {
-          return this.calculatePDF20Hash(password, concatBytes, userBytes);
+        hash(password, concatBytes2, userBytes) {
+          return this.calculatePDF20Hash(password, concatBytes2, userBytes);
         }
         checkOwnerPassword(password, ownerValidationSalt, userBytes, ownerPassword) {
           const hashData = new Uint8Array(password.length + 56);
@@ -68906,6 +68906,109 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
 
   // src/features/extract-text.js
   init_ui();
+  var CRC_TABLE = (() => {
+    const t = new Uint32Array(256);
+    for (let i = 0; i < 256; i++) {
+      let c = i;
+      for (let k = 0; k < 8; k++)
+        c = c & 1 ? 3988292384 ^ c >>> 1 : c >>> 1;
+      t[i] = c;
+    }
+    return t;
+  })();
+  function crc32(data) {
+    let crc = 4294967295;
+    for (const b of data)
+      crc = CRC_TABLE[(crc ^ b) & 255] ^ crc >>> 8;
+    return (crc ^ 4294967295) >>> 0;
+  }
+  function concatBytes(arrays) {
+    const total = arrays.reduce((s, a) => s + a.length, 0);
+    const out = new Uint8Array(total);
+    let pos = 0;
+    for (const a of arrays) {
+      out.set(a, pos);
+      pos += a.length;
+    }
+    return out;
+  }
+  function buildZip(files) {
+    const enc = new TextEncoder();
+    const parts = [];
+    const dirs = [];
+    let offset = 0;
+    for (const { name, data } of files) {
+      const nb = enc.encode(name);
+      const crc = crc32(data);
+      const lh = new DataView(new ArrayBuffer(30));
+      lh.setUint32(0, 67324752, true);
+      lh.setUint16(4, 20, true);
+      lh.setUint16(6, 0, true);
+      lh.setUint16(8, 0, true);
+      lh.setUint16(10, 0, true);
+      lh.setUint16(12, 0, true);
+      lh.setUint32(14, crc, true);
+      lh.setUint32(18, data.length, true);
+      lh.setUint32(22, data.length, true);
+      lh.setUint16(26, nb.length, true);
+      lh.setUint16(28, 0, true);
+      parts.push(new Uint8Array(lh.buffer), nb, data);
+      const cd = new DataView(new ArrayBuffer(46));
+      cd.setUint32(0, 33639248, true);
+      cd.setUint16(4, 20, true);
+      cd.setUint16(6, 20, true);
+      cd.setUint16(8, 0, true);
+      cd.setUint16(10, 0, true);
+      cd.setUint16(12, 0, true);
+      cd.setUint16(14, 0, true);
+      cd.setUint32(16, crc, true);
+      cd.setUint32(20, data.length, true);
+      cd.setUint32(24, data.length, true);
+      cd.setUint16(28, nb.length, true);
+      cd.setUint16(30, 0, true);
+      cd.setUint16(32, 0, true);
+      cd.setUint16(34, 0, true);
+      cd.setUint16(36, 0, true);
+      cd.setUint32(38, 0, true);
+      cd.setUint32(42, offset, true);
+      dirs.push(new Uint8Array(cd.buffer), nb);
+      offset += 30 + nb.length + data.length;
+    }
+    const cdBytes = concatBytes(dirs);
+    const eocd = new DataView(new ArrayBuffer(22));
+    eocd.setUint32(0, 101010256, true);
+    eocd.setUint16(4, 0, true);
+    eocd.setUint16(6, 0, true);
+    eocd.setUint16(8, files.length, true);
+    eocd.setUint16(10, files.length, true);
+    eocd.setUint32(12, cdBytes.length, true);
+    eocd.setUint32(16, offset, true);
+    eocd.setUint16(20, 0, true);
+    return concatBytes([...parts, cdBytes, new Uint8Array(eocd.buffer)]);
+  }
+  function escXml(s) {
+    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+  }
+  function buildDocx(text) {
+    const enc = new TextEncoder();
+    const enc8 = (s) => enc.encode(s);
+    const lines = text.split("\n");
+    const paras = lines.map((line) => {
+      if (!line.trim())
+        return "<w:p/>";
+      return `<w:p><w:r><w:t xml:space="preserve">${escXml(line)}</w:t></w:r></w:p>`;
+    }).join("");
+    const contentTypes = `<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>`;
+    const rels = `<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`;
+    const wordRels = `<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"/>`;
+    const document2 = `<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${paras}<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/></w:sectPr></w:body></w:document>`;
+    return buildZip([
+      { name: "[Content_Types].xml", data: enc8(contentTypes) },
+      { name: "_rels/.rels", data: enc8(rels) },
+      { name: "word/document.xml", data: enc8(document2) },
+      { name: "word/_rels/document.xml.rels", data: enc8(wordRels) }
+    ]);
+  }
   function extractPlain(items) {
     return items.filter((i) => "str" in i).map((i) => i.str).join("").trim();
   }
@@ -69058,7 +69161,8 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
             <span class="panel-title">\u2461 Extracted Text</span>
             <div id="ext-actions" style="display:none;gap:6px;align-items:center;" class="ext-action-row">
               <button class="btn btn-sm" id="ext-copy">\u{1F4CB} Copy</button>
-              <button class="btn btn-sm" id="ext-save">\u{1F4BE} Save .txt</button>
+              <button class="btn btn-sm" id="ext-save">\u{1F4BE} .txt</button>
+              <button class="btn btn-sm" id="ext-save-docx">\u{1F4C4} .docx</button>
             </div>
           </div>
 
@@ -69179,6 +69283,26 @@ ${trimmed}`);
           });
           const writable = await handle.createWritable();
           await writable.write(lastText);
+          await writable.close();
+          toast(`Saved \u2192 ${handle.name}`, "success");
+        } catch (e) {
+          if (e.name !== "AbortError")
+            toast("Save failed: " + e.message, "error");
+        }
+      });
+      container.querySelector("#ext-save-docx").addEventListener("click", async () => {
+        if (!lastText)
+          return;
+        const mode = container.querySelector('input[name="ext-mode"]:checked').value;
+        const suggestedName = stripExt(srcName) + (mode === "table" ? "_table.docx" : "_text.docx");
+        try {
+          const docxBytes = buildDocx(lastText);
+          const handle = await window.showSaveFilePicker({
+            suggestedName,
+            types: [{ description: "Word Document", accept: { "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"] } }]
+          });
+          const writable = await handle.createWritable();
+          await writable.write(docxBytes);
           await writable.close();
           toast(`Saved \u2192 ${handle.name}`, "success");
         } catch (e) {
@@ -69782,6 +69906,13 @@ ${trimmed}`);
               If the PDF is a scan, every page is one big image \u2014 you'll get one
               image per page. For true "photos embedded in a document", this tool
               extracts each unique bitmap.
+              <br><br>
+              <strong style="color:var(--text-muted);">Resolution:</strong>
+              Images are extracted at their <em>native embedded resolution</em> \u2014
+              exactly the pixel dimensions the author placed in the PDF. There is
+              no source data to recover a higher resolution from.
+              If you need high-resolution renderings of entire pages (e.g. for a
+              scanned document), use <strong>PDF \u2192 Images</strong> at 300 dpi instead.
             </p>
           </div>
         </div>
@@ -71571,8 +71702,9 @@ ${trimmed}`);
       <div class="feature-header">
         <h2>Redact</h2>
         <p class="feature-desc">
-          Draw redaction boxes on the page preview below, then click Apply.
-          For permanent removal of sensitive data, also run <strong>Flatten to Images</strong> afterward.
+          Draw redaction boxes on the page preview, then click Apply.
+          Each box is numbered \u2014 review and delete individual boxes in the list below the canvas.
+          For permanent removal, also run <strong>Flatten to Images</strong> afterward.
         </p>
       </div>
 
@@ -71596,10 +71728,8 @@ ${trimmed}`);
               <button class="btn btn-sm" id="rd-next">Next \u203A</button>
             </div>
             <div class="status-text" id="rd-box-count"></div>
-
             <div style="display:flex;gap:6px;margin-top:10px;">
-              <button class="btn btn-sm" id="rd-undo">\u21A9 Undo last</button>
-              <button class="btn btn-sm" id="rd-clear-page">Clear page</button>
+              <button class="btn btn-sm" id="rd-clear-page">Clear this page</button>
               <button class="btn btn-sm" id="rd-clear-all">Clear all</button>
             </div>
           </div>
@@ -71609,14 +71739,14 @@ ${trimmed}`);
         <div class="panel" style="display:flex;flex-direction:column;justify-content:flex-end;">
           <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;font-size:13px;color:var(--text-muted);line-height:1.6;">
             <strong style="color:var(--text);">How to redact</strong><br>
-            1. Click and drag on the page preview to draw a black box.<br>
-            2. Repeat for all areas you want covered.<br>
-            3. Navigate pages using Prev / Next.<br>
-            4. Click Apply Redactions.<br><br>
+            1. Drag on the preview to draw a numbered black box.<br>
+            2. Click a box number on canvas to select it, then Delete.<br>
+            3. Or use the <strong>Box Manager</strong> list to review all boxes and delete individually.<br>
+            4. Navigate pages with Prev / Next.<br>
+            5. Click Apply Redactions when done.<br><br>
             <strong style="color:var(--text);">For truly permanent redaction</strong><br>
-            Also run <em>Flatten to Images</em> on the result.
-            Flattening rasterizes the page, so the data underneath the
-            black boxes is gone \u2014 not just hidden.
+            Also run <em>Flatten to Images</em> on the result \u2014
+            that bakes the black boxes into pixels so the underlying data is gone.
           </div>
           <div class="action-bar" style="margin-top:14px;">
             <button class="btn btn-primary btn-lg" id="rd-run" disabled
@@ -71633,15 +71763,31 @@ ${trimmed}`);
       <div class="panel" id="rd-preview-panel" style="display:none;margin-top:0;">
         <div class="panel-header">
           <span class="panel-title">Draw redaction boxes</span>
-          <span class="status-text">Click and drag to add a black box</span>
+          <span class="status-text">Drag to draw \xB7 click a numbered box to select it \xB7 Delete key or button to remove</span>
         </div>
-        <div style="position:relative;display:inline-block;max-width:100%;cursor:crosshair;"
+        <div style="position:relative;display:inline-block;max-width:100%;"
           id="rd-canvas-wrap">
-          <canvas id="rd-canvas" style="display:block;max-width:100%;border:1px solid var(--border);border-radius:var(--radius-sm);"></canvas>
-          <!-- SVG overlay for drawn boxes -->
+          <canvas id="rd-canvas" style="display:block;max-width:100%;border:1px solid var(--border);border-radius:var(--radius-sm);cursor:crosshair;"></canvas>
           <svg id="rd-svg" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;"></svg>
-          <!-- Drag rect during drawing -->
-          <div id="rd-drag-rect" style="display:none;position:absolute;border:2px solid #ef4444;background:rgba(239,68,68,0.25);pointer-events:none;"></div>
+          <div id="rd-drag-rect" style="display:none;position:absolute;border:2px solid #ef4444;background:rgba(239,68,68,0.2);pointer-events:none;"></div>
+        </div>
+        <!-- Selected box toolbar -->
+        <div id="rd-sel-bar" style="display:none;margin-top:8px;display:none;align-items:center;gap:8px;">
+          <span id="rd-sel-label" style="font-size:13px;color:var(--text-muted);"></span>
+          <button class="btn btn-sm" id="rd-sel-delete" style="color:#ef4444;border-color:#ef4444;">\u{1F5D1} Delete selected</button>
+          <button class="btn btn-sm" id="rd-sel-deselect">Deselect</button>
+        </div>
+      </div>
+
+      <!-- \u2500\u2500 Box Manager \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 -->
+      <div class="panel" id="rd-manager-panel" style="display:none;margin-top:0;">
+        <div class="panel-header">
+          <span class="panel-title">Box Manager</span>
+          <span id="rd-manager-count" class="status-text"></span>
+        </div>
+        <div id="rd-manager-list"
+          style="display:flex;flex-direction:column;gap:4px;max-height:280px;overflow-y:auto;">
+          <span class="status-text" style="padding:8px 0;">No boxes yet \u2014 draw on the page preview above.</span>
         </div>
       </div>
     `;
@@ -71653,6 +71799,7 @@ ${trimmed}`);
       let pageW = 1;
       let pageH = 1;
       const boxes = {};
+      let selected = null;
       const nameEl = container.querySelector("#rd-filename");
       const navEl = container.querySelector("#rd-nav");
       const pageLbl = container.querySelector("#rd-page-label");
@@ -71662,11 +71809,187 @@ ${trimmed}`);
       const prevBtn = container.querySelector("#rd-prev");
       const nextBtn = container.querySelector("#rd-next");
       const previewPanel = container.querySelector("#rd-preview-panel");
+      const managerPanel = container.querySelector("#rd-manager-panel");
+      const managerList = container.querySelector("#rd-manager-list");
+      const managerCount = container.querySelector("#rd-manager-count");
       const canvas = container.querySelector("#rd-canvas");
       const ctx = canvas.getContext("2d");
       const svg = container.querySelector("#rd-svg");
       const dragRect = container.querySelector("#rd-drag-rect");
       const wrap = container.querySelector("#rd-canvas-wrap");
+      const selBar = container.querySelector("#rd-sel-bar");
+      const selLabel = container.querySelector("#rd-sel-label");
+      function setSelected(page, idx) {
+        selected = page != null && idx != null ? { page, idx } : null;
+        const hasSelection = selected !== null;
+        selBar.style.display = hasSelection ? "flex" : "none";
+        if (hasSelection) {
+          selLabel.textContent = `Page ${selected.page}, Box ${selected.idx + 1} selected`;
+        }
+        drawOverlay();
+        renderBoxManager();
+      }
+      function deleteSelected() {
+        if (!selected)
+          return;
+        const pg = selected.page;
+        const idx = selected.idx;
+        if (boxes[pg]) {
+          boxes[pg].splice(idx, 1);
+          if (!boxes[pg].length)
+            delete boxes[pg];
+        }
+        selected = null;
+        selBar.style.display = "none";
+        if (pg === curPage)
+          drawOverlay();
+        updateBoxCount();
+        renderBoxManager();
+      }
+      container.querySelector("#rd-sel-delete").addEventListener("click", deleteSelected);
+      container.querySelector("#rd-sel-deselect").addEventListener("click", () => setSelected(null, null));
+      document.addEventListener("keydown", (e) => {
+        if ((e.key === "Delete" || e.key === "Backspace") && selected && container.isConnected && document.activeElement.tagName !== "INPUT") {
+          e.preventDefault();
+          deleteSelected();
+        }
+      });
+      function drawOverlay() {
+        svg.innerHTML = "";
+        const pg = boxes[curPage] || [];
+        const scaleX = canvas.width / pageW;
+        const scaleY = canvas.height / pageH;
+        pg.forEach((b, i) => {
+          const cx2 = b.x * scaleX;
+          const cy2 = (pageH - b.y - b.h) * scaleY;
+          const cw = b.w * scaleX;
+          const ch = b.h * scaleY;
+          const isSelected = selected?.page === curPage && selected?.idx === i;
+          const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+          rect.setAttribute("x", cx2);
+          rect.setAttribute("y", cy2);
+          rect.setAttribute("width", cw);
+          rect.setAttribute("height", ch);
+          rect.setAttribute("fill", "black");
+          if (isSelected) {
+            rect.setAttribute("stroke", "#3b82f6");
+            rect.setAttribute("stroke-width", "3");
+          }
+          svg.appendChild(rect);
+          const fontSize = Math.max(10, Math.min(20, ch * 0.5, cw * 0.4));
+          const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+          text.setAttribute("x", cx2 + cw / 2);
+          text.setAttribute("y", cy2 + ch / 2 + fontSize * 0.35);
+          text.setAttribute("text-anchor", "middle");
+          text.setAttribute("font-size", fontSize);
+          text.setAttribute("font-family", "sans-serif");
+          text.setAttribute("font-weight", "bold");
+          text.setAttribute("fill", isSelected ? "#93c5fd" : "white");
+          text.setAttribute("pointer-events", "none");
+          text.textContent = String(i + 1);
+          svg.appendChild(text);
+        });
+      }
+      canvas.addEventListener("click", (e) => {
+        if (Math.abs(dragMoveDistance) > 6)
+          return;
+        const cc = canvasCoords(e);
+        const pg = boxes[curPage] || [];
+        const scaleX = canvas.width / pageW;
+        const scaleY = canvas.height / pageH;
+        for (let i = pg.length - 1; i >= 0; i--) {
+          const b = pg[i];
+          const cx2 = b.x * scaleX, cy2 = (pageH - b.y - b.h) * scaleY;
+          const cw = b.w * scaleX, ch = b.h * scaleY;
+          if (cc.x >= cx2 && cc.x <= cx2 + cw && cc.y >= cy2 && cc.y <= cy2 + ch) {
+            if (selected?.page === curPage && selected?.idx === i) {
+              setSelected(null, null);
+            } else {
+              setSelected(curPage, i);
+            }
+            return;
+          }
+        }
+        setSelected(null, null);
+      });
+      function renderBoxManager() {
+        const allEntries = [];
+        for (const [pgStr, rects] of Object.entries(boxes)) {
+          const pg = parseInt(pgStr);
+          rects.forEach((b, idx) => allEntries.push({ pg, idx, b }));
+        }
+        const total = allEntries.length;
+        managerCount.textContent = total ? `${total} box${total !== 1 ? "es" : ""} total` : "";
+        if (!total) {
+          managerList.innerHTML = '<span class="status-text" style="padding:8px 0;">No boxes yet \u2014 draw on the page preview above.</span>';
+          return;
+        }
+        const byPage = {};
+        for (const e of allEntries) {
+          if (!byPage[e.pg])
+            byPage[e.pg] = [];
+          byPage[e.pg].push(e);
+        }
+        managerList.innerHTML = "";
+        for (const [pgStr, entries] of Object.entries(byPage).sort((a, b) => a[0] - b[0])) {
+          const pg = parseInt(pgStr);
+          const pageHead = document.createElement("div");
+          pageHead.style.cssText = "font-size:11px;font-weight:600;color:var(--text-subtle);text-transform:uppercase;letter-spacing:.05em;padding:6px 0 2px;border-top:1px solid var(--border);margin-top:4px;";
+          pageHead.textContent = `Page ${pg}`;
+          managerList.appendChild(pageHead);
+          entries.forEach(({ idx, b }) => {
+            const isSelected = selected?.page === pg && selected?.idx === idx;
+            const wMm = (b.w / (72 / 25.4)).toFixed(0);
+            const hMm = (b.h / (72 / 25.4)).toFixed(0);
+            const row = document.createElement("div");
+            row.style.cssText = `display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:4px;cursor:pointer;background:${isSelected ? "rgba(59,130,246,0.1)" : "var(--bg)"};border:1px solid ${isSelected ? "#3b82f6" : "var(--border)"};`;
+            row.innerHTML = `
+            <span style="background:black;color:white;font-size:11px;font-weight:bold;
+              min-width:20px;height:20px;border-radius:3px;display:flex;align-items:center;
+              justify-content:center;flex-shrink:0;">${idx + 1}</span>
+            <span style="flex:1;font-size:12px;color:var(--text-muted);">
+              Box ${idx + 1} &nbsp;\xB7&nbsp; ${wMm}\xD7${hMm} mm
+            </span>
+            <button data-pg="${pg}" data-idx="${idx}"
+              style="background:none;border:1px solid #ef4444;color:#ef4444;border-radius:4px;
+              padding:2px 8px;font-size:11px;cursor:pointer;flex-shrink:0;">Delete</button>
+          `;
+            row.addEventListener("click", async (e) => {
+              if (e.target.dataset.pg)
+                return;
+              if (pg !== curPage) {
+                curPage = pg;
+                await renderCurPage();
+              }
+              setSelected(pg, idx);
+            });
+            row.querySelector("button").addEventListener("click", (e) => {
+              e.stopPropagation();
+              if (selected?.page === pg && selected?.idx === idx)
+                selected = null;
+              boxes[pg].splice(idx, 1);
+              if (!boxes[pg].length)
+                delete boxes[pg];
+              if (pg === curPage)
+                drawOverlay();
+              updateBoxCount();
+              renderBoxManager();
+              if (selected)
+                selBar.style.display = "flex";
+              else
+                selBar.style.display = "none";
+            });
+            managerList.appendChild(row);
+          });
+        }
+      }
+      function updateBoxCount() {
+        const all = Object.values(boxes).reduce((s, a) => s + a.length, 0);
+        const pg = (boxes[curPage] || []).length;
+        boxCount.textContent = `${pg} box${pg !== 1 ? "es" : ""} on this page \xB7 ${all} total`;
+        statusEl.textContent = all ? `${all} redaction${all > 1 ? "s" : ""} ready to apply` : "";
+        managerPanel.style.display = "";
+      }
       async function renderCurPage() {
         if (!rDoc)
           return;
@@ -71688,32 +72011,9 @@ ${trimmed}`);
         nextBtn.disabled = curPage >= totalPgs;
         updateBoxCount();
       }
-      function drawOverlay() {
-        svg.innerHTML = "";
-        const pg = boxes[curPage] || [];
-        for (const b of pg) {
-          const cx2 = b.x / (pageW / canvas.width);
-          const cy2 = (pageH - b.y - b.h) / (pageH / canvas.height);
-          const cw = b.w / (pageW / canvas.width);
-          const ch = b.h / (pageH / canvas.height);
-          const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-          rect.setAttribute("x", cx2);
-          rect.setAttribute("y", cy2);
-          rect.setAttribute("width", cw);
-          rect.setAttribute("height", ch);
-          rect.setAttribute("fill", "black");
-          svg.appendChild(rect);
-        }
-      }
-      function updateBoxCount() {
-        const all = Object.values(boxes).reduce((s, a) => s + a.length, 0);
-        const pg = (boxes[curPage] || []).length;
-        boxCount.textContent = `${pg} box${pg !== 1 ? "es" : ""} on this page \xB7 ${all} total`;
-        const n = Object.values(boxes).reduce((s, a) => s + a.length, 0);
-        statusEl.textContent = n ? `${n} redaction${n > 1 ? "s" : ""} ready to apply` : "";
-      }
       let dragging = false;
       let dragStart = null;
+      let dragMoveDistance = 0;
       function canvasCoords(e) {
         const rect = canvas.getBoundingClientRect();
         const scaleX = canvas.width / rect.width;
@@ -71725,29 +72025,27 @@ ${trimmed}`);
         };
       }
       function showDragRect(x1, y1, x2, y2) {
-        const rect = canvas.getBoundingClientRect();
-        const wrap2 = canvas.parentElement.getBoundingClientRect();
-        const scaleX = rect.width / canvas.width;
-        const scaleY = rect.height / canvas.height;
-        const lx = Math.min(x1, x2) * scaleX + (rect.left - wrap2.left);
-        const ly = Math.min(y1, y2) * scaleY + (rect.top - wrap2.top);
+        const cRect = canvas.getBoundingClientRect();
+        const wRect = wrap.getBoundingClientRect();
+        const scaleX = cRect.width / canvas.width;
+        const scaleY = cRect.height / canvas.height;
+        const lx = Math.min(x1, x2) * scaleX + (cRect.left - wRect.left);
+        const ly = Math.min(y1, y2) * scaleY + (cRect.top - wRect.top);
         const lw = Math.abs(x2 - x1) * scaleX;
         const lh = Math.abs(y2 - y1) * scaleY;
-        dragRect.style.cssText = `
-        display:block;position:absolute;
-        left:${lx}px;top:${ly}px;width:${lw}px;height:${lh}px;
-        border:2px solid #ef4444;background:rgba(239,68,68,0.25);pointer-events:none;
-      `;
+        dragRect.style.cssText = `display:block;position:absolute;left:${lx}px;top:${ly}px;width:${lw}px;height:${lh}px;border:2px solid #ef4444;background:rgba(239,68,68,0.2);pointer-events:none;`;
       }
       canvas.addEventListener("mousedown", (e) => {
         e.preventDefault();
         dragging = true;
+        dragMoveDistance = 0;
         dragStart = canvasCoords(e);
       });
       window.addEventListener("mousemove", (e) => {
         if (!dragging || !dragStart)
           return;
         const cur = canvasCoords(e);
+        dragMoveDistance = Math.max(Math.abs(cur.x - dragStart.x), Math.abs(cur.y - dragStart.y));
         showDragRect(dragStart.x, dragStart.y, cur.x, cur.y);
       });
       window.addEventListener("mouseup", (e) => {
@@ -71756,18 +72054,21 @@ ${trimmed}`);
         dragging = false;
         const cur = canvasCoords(e);
         dragRect.style.display = "none";
-        commitBox(dragStart, cur);
+        if (dragMoveDistance > 6)
+          commitBox(dragStart, cur);
         dragStart = null;
       });
       canvas.addEventListener("touchstart", (e) => {
         e.preventDefault();
         dragging = true;
+        dragMoveDistance = 0;
         dragStart = canvasCoords(e);
       }, { passive: false });
       window.addEventListener("touchmove", (e) => {
         if (!dragging || !dragStart)
           return;
         const cur = canvasCoords(e);
+        dragMoveDistance = Math.max(Math.abs(cur.x - dragStart.x), Math.abs(cur.y - dragStart.y));
         showDragRect(dragStart.x, dragStart.y, cur.x, cur.y);
       });
       window.addEventListener("touchend", (e) => {
@@ -71776,53 +72077,55 @@ ${trimmed}`);
         dragging = false;
         const changedTouch = e.changedTouches[0];
         const rect = canvas.getBoundingClientRect();
-        const scaleX = canvas.width / rect.width;
-        const scaleY = canvas.height / rect.height;
+        const sx2 = canvas.width / rect.width;
+        const sy2 = canvas.height / rect.height;
         const cur = {
-          x: (changedTouch.clientX - rect.left) * scaleX,
-          y: (changedTouch.clientY - rect.top) * scaleY
+          x: (changedTouch.clientX - rect.left) * sx2,
+          y: (changedTouch.clientY - rect.top) * sy2
         };
         dragRect.style.display = "none";
-        commitBox(dragStart, cur);
+        if (dragMoveDistance > 6)
+          commitBox(dragStart, cur);
         dragStart = null;
       });
       function commitBox(start, end) {
-        const cw = canvas.width;
-        const ch = canvas.height;
-        const x1 = Math.max(0, Math.min(start.x, end.x, cw));
-        const y1 = Math.max(0, Math.min(start.y, end.y, ch));
-        const x2 = Math.min(cw, Math.max(start.x, end.x, 0));
-        const y2 = Math.min(ch, Math.max(start.y, end.y, 0));
-        const bw = x2 - x1;
-        const bh = y2 - y1;
-        if (bw < 4 || bh < 4)
+        const cw = canvas.width, ch = canvas.height;
+        const x1 = Math.max(0, Math.min(start.x, end.x));
+        const y1 = Math.max(0, Math.min(start.y, end.y));
+        const x2 = Math.min(cw, Math.max(start.x, end.x));
+        const y2 = Math.min(ch, Math.max(start.y, end.y));
+        if (x2 - x1 < 4 || y2 - y1 < 4)
           return;
         const pdfX = x1 / cw * pageW;
         const pdfY = (ch - y2) / ch * pageH;
-        const pdfW = bw / cw * pageW;
-        const pdfH = bh / ch * pageH;
+        const pdfW = (x2 - x1) / cw * pageW;
+        const pdfH = (y2 - y1) / ch * pageH;
         if (!boxes[curPage])
           boxes[curPage] = [];
         boxes[curPage].push({ x: pdfX, y: pdfY, w: pdfW, h: pdfH });
+        selected = null;
+        selBar.style.display = "none";
         drawOverlay();
         updateBoxCount();
+        renderBoxManager();
       }
-      container.querySelector("#rd-undo").addEventListener("click", () => {
-        if (boxes[curPage]?.length) {
-          boxes[curPage].pop();
-          drawOverlay();
-          updateBoxCount();
-        }
-      });
       container.querySelector("#rd-clear-page").addEventListener("click", () => {
+        if (selected?.page === curPage) {
+          selected = null;
+          selBar.style.display = "none";
+        }
         boxes[curPage] = [];
         drawOverlay();
         updateBoxCount();
+        renderBoxManager();
       });
       container.querySelector("#rd-clear-all").addEventListener("click", () => {
         Object.keys(boxes).forEach((k) => delete boxes[k]);
+        selected = null;
+        selBar.style.display = "none";
         drawOverlay();
         updateBoxCount();
+        renderBoxManager();
       });
       prevBtn.addEventListener("click", () => {
         if (curPage > 1) {
@@ -74119,7 +74422,7 @@ Method 2: ${err2.message}`);
   }
   function stampVersion() {
     document.querySelectorAll(".sidebar-version").forEach((el) => {
-      if (el.textContent.includes("2.1.0"))
+      if (el.textContent.includes("2.2.0"))
         el.textContent = "dev";
     });
   }
