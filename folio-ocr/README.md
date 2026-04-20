@@ -14,6 +14,7 @@ works fully offline after first load (no CDN dependency).
 | `pdf.min.mjs` | ~420 KB | PDF.js main module | [pdfjs-dist@5.6.205](https://www.npmjs.com/package/pdfjs-dist) | Apache 2.0 |
 | `pdf.worker.min.mjs` | ~1.2 MB | PDF.js rendering worker | pdfjs-dist@5.6.205 | Apache 2.0 |
 | `lang/eng.traineddata.gz` | ~10 MB | Tesseract English LSTM model | [tessdata.projectnaptha.com](https://tessdata.projectnaptha.com) | Apache 2.0 |
+| `pdf-lib.min.js` | ~513 KB | PDF creation / editing library | [pdf-lib@1.17.1](https://www.npmjs.com/package/pdf-lib) | MIT |
 
 ## Why local instead of CDN?
 

@@ -438,6 +438,7 @@
           <div class="output-actions">
             <button class="btn btn-sm" id="copy-btn" disabled>📋 Copy</button>
             <button class="btn btn-sm" id="save-btn" disabled>💾 Save .txt</button>
+            <button class="btn btn-sm" id="save-pdf-btn" disabled>📄 Save searchable PDF</button>
           </div>
         </div>
 
@@ -461,6 +462,7 @@
 
   <!-- ── Dependencies (local) ─────────────────────────────────────────── -->
   <script src="./folio-ocr/tesseract.min.js"></script>
+  <script src="./folio-ocr/pdf-lib.min.js"></script>
 
   <script type="module">
     import * as pdfjsLib from './folio-ocr/pdf.min.mjs'
@@ -476,6 +478,7 @@
     const cancelBtn  = $('cancel-btn')
     const copyBtn    = $('copy-btn')
     const saveBtn    = $('save-btn')
+    const savePdfBtn = $('save-pdf-btn')
     const output     = $('output')
     const charCount  = $('char-count')
     const statusEl   = $('status')
@@ -490,7 +493,10 @@
     let srcName       = ''
     let scheduler     = null
     let cancelled     = false
+    let srcBytes      = null   // original PDF ArrayBuffer for the output PDF
+    let totalPageCount = 0
     const pageProgress = new Map()
+    const pageHocr     = new Map()  // pageNum → { hocr, scale, pageWidthPts, pageHeightPts }
 
     // ── Settings helpers ────────────────────────────────────────────────
     const qualityScale = () => {
@@ -538,6 +544,7 @@
       charCount.textContent = ''
       copyBtn.disabled = true
       saveBtn.disabled = true
+      savePdfBtn.disabled = true
     }
 
     drop.addEventListener('click', () => fileInput.click())
@@ -620,6 +627,9 @@
       cancelled = false
       pageResults.clear()
       pageProgress.clear()
+      pageHocr.clear()
+      srcBytes = null
+      totalPageCount = 0
       output.value = ''
       charCount.textContent = ''
       copyBtn.disabled = true
@@ -639,9 +649,12 @@
 
         if (isPDF) {
           statusEl.textContent = 'Loading PDF…'
-          const bytes = new Uint8Array(await srcFile.arrayBuffer())
+          const buf = await srcFile.arrayBuffer()
+          srcBytes = buf
+          const bytes = new Uint8Array(buf)
           const doc = await pdfjsLib.getDocument({ data: bytes }).promise
           totalPages = doc.numPages
+          totalPageCount = totalPages
 
           const scale = qualityScale()
           for (let p = 1; p <= totalPages; p++) {
@@ -664,9 +677,10 @@
               continue
             }
 
+            const vp = page.getViewport({ scale: 1 })
             const canvas = await renderPage(page, scale)
             page.cleanup()
-            jobs.push({ pageNum: p, canvas })
+            jobs.push({ pageNum: p, canvas, scale, pageWidthPts: vp.width, pageHeightPts: vp.height })
           }
           doc.destroy()
         } else {
@@ -677,7 +691,8 @@
           canvas.width = bmp.width; canvas.height = bmp.height
           canvas.getContext('2d').drawImage(bmp, 0, 0)
           preprocess(canvas)
-          jobs.push({ pageNum: 1, canvas })
+          // scale=1 for images: canvas px == PDF pts directly
+          jobs.push({ pageNum: 1, canvas, scale: 1, pageWidthPts: bmp.width, pageHeightPts: bmp.height })
         }
 
         if (!jobs.length) {
@@ -717,14 +732,15 @@
         // ── 3. Process in parallel ──────────────────────────────────
         statusEl.textContent = `Recognizing ${jobs.length} page${jobs.length > 1 ? 's' : ''} with ${nWorkers} worker${nWorkers > 1 ? 's' : ''}…`
 
-        await Promise.all(jobs.map(async ({ pageNum, canvas }) => {
+        await Promise.all(jobs.map(async ({ pageNum, canvas, scale, pageWidthPts, pageHeightPts }) => {
           if (cancelled) return
           // Tag each job so the logger knows which page it belongs to
           const job = scheduler.addJob('recognize', canvas, undefined, String(pageNum))
-          const { data: { text } } = await job
+          const { data: { text, hocr } } = await job
           if (cancelled) return
           pageProgress.set(pageNum, 1)
           emitPage(pageNum, text, totalPages)
+          if (hocr) pageHocr.set(pageNum, { hocr, scale, pageWidthPts, pageHeightPts })
           updateAggregateProgress(totalPages)
           statusEl.textContent = `Recognized ${pageResults.size} of ${totalPages} pages…`
         }))
@@ -739,6 +755,7 @@
         statusEl.className = 'status done'
         copyBtn.disabled = output.value.length === 0
         saveBtn.disabled = output.value.length === 0
+        savePdfBtn.disabled = pageHocr.size === 0
         showToast('Text extracted.', 'success')
 
       } catch (err) {
@@ -780,6 +797,115 @@
         showToast('Copied to clipboard.', 'success')
       } catch {
         showToast('Clipboard unavailable — select all and copy manually.', 'warning')
+      }
+    })
+
+    // ── hOCR parser ────────────────────────────────────────────────────
+    function parseHocr(hocrStr) {
+      const doc = new DOMParser().parseFromString(hocrStr, 'text/html')
+      const words = []
+      doc.querySelectorAll('.ocrx_word').forEach(span => {
+        const text = span.textContent.trim()
+        if (!text) return
+        const m = (span.getAttribute('title') || '').match(/bbox\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/)
+        if (!m) return
+        words.push({ text, x0: +m[1], y0: +m[2], x1: +m[3], y1: +m[4] })
+      })
+      return words
+    }
+
+    // ── Build searchable PDF ────────────────────────────────────────────
+    async function buildSearchablePdf() {
+      const { PDFDocument, StandardFonts, rgb } = PDFLib
+
+      let pdfDoc
+      const isPDF = srcBytes != null
+
+      if (isPDF) {
+        pdfDoc = await PDFDocument.load(srcBytes)
+      } else {
+        pdfDoc = await PDFDocument.create()
+        // For image source: embed image and add a page
+        const imgData = await srcFile.arrayBuffer()
+        const name = (srcName || '').toLowerCase()
+        let img
+        if (/\.png$/.test(name)) {
+          img = await pdfDoc.embedPng(imgData)
+        } else {
+          img = await pdfDoc.embedJpg(imgData)
+        }
+        const page = pdfDoc.addPage([img.width, img.height])
+        page.drawImage(img, { x: 0, y: 0, width: img.width, height: img.height })
+      }
+
+      const font = await pdfDoc.embedFont(StandardFonts.Helvetica)
+      const pages = pdfDoc.getPages()
+
+      for (const [pageNum, { hocr, scale, pageHeightPts }] of pageHocr) {
+        const page = pages[pageNum - 1]
+        if (!page) continue
+        const words = parseHocr(hocr)
+        for (const { text, x0, y0, x1, y1 } of words) {
+          const xPdf   = x0 / scale
+          const yPdf   = pageHeightPts - y1 / scale   // flip: PDF origin is bottom-left
+          const hPdf   = (y1 - y0) / scale
+          const size   = Math.max(4, hPdf * 0.85)
+          try {
+            page.drawText(text, {
+              x: xPdf, y: yPdf,
+              size,
+              font,
+              color: rgb(0, 0, 0),
+              opacity: 0,
+            })
+          } catch { /* skip glyphs the font can't encode */ }
+        }
+      }
+
+      return pdfDoc.save()
+    }
+
+    // ── Save searchable PDF ─────────────────────────────────────────────
+    savePdfBtn.addEventListener('click', async () => {
+      if (pageHocr.size === 0) return
+      const stripExt = n => n.replace(/\.[^.]+$/, '')
+      const suggestedName = stripExt(srcName || 'ocr-output') + '_searchable.pdf'
+      savePdfBtn.disabled = true
+      try {
+        statusEl.textContent = 'Building searchable PDF…'
+        statusEl.className = 'status running'
+        const pdfBytes = await buildSearchablePdf()
+        const blob = new Blob([pdfBytes], { type: 'application/pdf' })
+        if (window.showSaveFilePicker) {
+          const handle = await window.showSaveFilePicker({
+            suggestedName,
+            types: [{ description: 'PDF file', accept: { 'application/pdf': ['.pdf'] } }],
+          })
+          const w = await handle.createWritable()
+          await w.write(blob)
+          await w.close()
+          showToast(`Saved → ${handle.name}`, 'success')
+        } else {
+          const url = URL.createObjectURL(blob)
+          const a   = document.createElement('a')
+          a.href = url; a.download = suggestedName
+          document.body.appendChild(a); a.click(); a.remove()
+          URL.revokeObjectURL(url)
+          showToast('Downloaded.', 'success')
+        }
+        statusEl.textContent = `Done — ${totalPageCount} page${totalPageCount > 1 ? 's' : ''} processed.`
+        statusEl.className = 'status done'
+      } catch (e) {
+        if (e.name !== 'AbortError') {
+          showToast('PDF save failed: ' + e.message, 'error')
+          statusEl.textContent = 'Error building PDF: ' + e.message
+          statusEl.className = 'status error'
+        } else {
+          statusEl.textContent = `Done — ${totalPageCount} page${totalPageCount > 1 ? 's' : ''} processed.`
+          statusEl.className = 'status done'
+        }
+      } finally {
+        savePdfBtn.disabled = false
       }
     })
 
