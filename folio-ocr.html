@@ -134,6 +134,14 @@
     .file-name.show { display: block; }
 
     /* ── Settings ─────────────────────────────────────────────────────────── */
+    .toggle-row {
+      display: flex; align-items: flex-start; gap: 10px;
+      cursor: pointer; margin-top: 2px;
+    }
+    .toggle-row input[type="checkbox"] { margin-top: 2px; flex-shrink: 0; cursor: pointer; }
+    .toggle-row .toggle-text { font-size: 13px; line-height: 1.4; }
+    .toggle-row .toggle-text small { display: block; color: var(--text-subtle); font-size: 11px; margin-top: 1px; }
+
     .section {
       margin-top: 18px;
     }
@@ -176,7 +184,7 @@
       border-color: var(--border-dark);
     }
 
-    select {
+    select, input[type="text"], input[type="password"] {
       width: 100%;
       padding: 8px 10px;
       border: 1px solid var(--border);
@@ -187,7 +195,33 @@
       color: var(--text);
       cursor: pointer;
     }
-    select:focus { outline: 2px solid var(--blue); outline-offset: -1px; }
+    input[type="text"], input[type="password"] { cursor: text; }
+    select:focus, input[type="text"]:focus, input[type="password"]:focus {
+      outline: 2px solid var(--blue); outline-offset: -1px;
+    }
+
+    /* ── Confidence view ─────────────────────────────────────────────────── */
+    .conf-view {
+      display: none;
+      flex: 1;
+      min-height: 460px;
+      overflow-y: auto;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 1.8;
+      color: var(--text);
+    }
+    .conf-view.show { display: block; }
+    .conf-view.show ~ .output { display: none; }
+    .conf-page-label { font-weight: 600; color: var(--text-muted); margin: 8px 0 4px; font-size: 12px; }
+    .conf-med { background: #fef9c3; border-radius: 2px; }
+    .conf-low { background: #fee2e2; border-radius: 2px; }
+    .conf-legend { font-size: 11px; color: var(--text-subtle); margin-top: 6px; }
+    .conf-legend span { display: inline-block; padding: 1px 6px; border-radius: 2px; margin-right: 4px; }
 
     .note {
       margin-top: 14px;
@@ -342,7 +376,7 @@
     </div>
 
     <header class="header">
-      <h1>📄 Folio-OCR</h1>
+      <h1>📄 Folio-OCR <span style="font-size:13px;font-weight:400;color:var(--text-subtle);letter-spacing:0">v1.4</span></h1>
       <p>Extract text from scanned PDFs and images. Everything runs in your browser — files never leave your device.</p>
     </header>
 
@@ -359,18 +393,33 @@
         </div>
         <div class="file-name" id="file-name"></div>
 
+        <div class="section" id="pdf-password-section" style="display:none">
+          <div class="section-label">PDF password (if encrypted)</div>
+          <input type="password" id="pdf-password" placeholder="Leave blank if not encrypted" autocomplete="off">
+        </div>
+
+        <div class="section">
+          <label class="toggle-row">
+            <input type="checkbox" id="straighten-chk">
+            <span class="toggle-text">
+              Straighten skewed / rotated pages
+              <small>Fixes 90°/180° rotation and small tilt. Rotated pages are rasterised in the searchable PDF.</small>
+            </span>
+          </label>
+        </div>
+
         <div class="section">
           <div class="section-label">Quality</div>
           <div class="radio-row">
-            <label>
+            <label title="Lower render resolution (1.5×) — faster but may miss small or dense text">
               <input type="radio" name="quality" value="fast">
               <span>Fast</span>
             </label>
-            <label>
+            <label title="Standard render resolution (2×) — good for most scans">
               <input type="radio" name="quality" value="balanced" checked>
               <span>Balanced</span>
             </label>
-            <label>
+            <label title="High render resolution (3×) — best accuracy for small text, slower and uses more memory">
               <input type="radio" name="quality" value="best">
               <span>Best</span>
             </label>
@@ -378,17 +427,35 @@
         </div>
 
         <div class="section">
+          <div class="section-label">Preprocessing</div>
+          <div class="radio-row">
+            <label title="Converts to greyscale and darkens midtones — recommended for light-grey handwriting, stamps or fill-in text">
+              <input type="radio" name="preprocess" value="darken" checked>
+              <span>Darken</span>
+            </label>
+            <label title="Symmetric contrast boost — good for faded or low-contrast printed text">
+              <input type="radio" name="preprocess" value="contrast">
+              <span>Contrast</span>
+            </label>
+            <label title="No image processing — use if the scan is already clean and high-contrast">
+              <input type="radio" name="preprocess" value="none">
+              <span>None</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="section">
           <div class="section-label">Layout</div>
           <div class="radio-row">
-            <label>
+            <label title="Tesseract auto-detects columns, paragraphs and text blocks — works for most documents">
               <input type="radio" name="layout" value="auto" checked>
               <span>Auto</span>
             </label>
-            <label>
+            <label title="Treats the page as one continuous block of text — best for single-column reports or letters">
               <input type="radio" name="layout" value="single">
               <span>Single col</span>
             </label>
-            <label>
+            <label title="Finds text scattered across the page without assuming structure — best for forms, receipts and tables">
               <input type="radio" name="layout" value="sparse">
               <span>Sparse</span>
             </label>
@@ -407,6 +474,11 @@
           </select>
         </div>
 
+        <div class="section">
+          <div class="section-label">Pages</div>
+          <input type="text" id="page-range" placeholder="All pages · e.g. 1-3, 5, 8-10">
+        </div>
+
         <div class="note info" id="first-run-note">
           ℹ First run downloads ~22 MB of OCR models. Cached by your browser —
           works offline after that.
@@ -420,6 +492,10 @@
         <div class="status" id="status">Drop a file to get started.</div>
         <div class="progress" id="progress">
           <div class="progress-bar" id="progress-bar"></div>
+        </div>
+
+        <div class="btn-row" style="margin-top: 10px;">
+          <button class="btn" id="save-pdf-btn" disabled style="flex:1">📄 Save searchable PDF</button>
         </div>
 
         <div style="margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border);">
@@ -436,16 +512,21 @@
         <div class="output-head">
           <div class="panel-title">② Extracted text</div>
           <div class="output-actions">
+            <button class="btn btn-sm" id="conf-btn" disabled>🔍 Confidence</button>
             <button class="btn btn-sm" id="copy-btn" disabled>📋 Copy</button>
             <button class="btn btn-sm" id="save-btn" disabled>💾 Save .txt</button>
-            <button class="btn btn-sm" id="save-pdf-btn" disabled>📄 Save searchable PDF</button>
           </div>
         </div>
+
+        <div class="conf-view" id="conf-view"></div>
 
         <textarea id="output" class="output" readonly
           placeholder="Extracted text will appear here as each page finishes."></textarea>
 
         <div class="char-count" id="char-count"></div>
+        <div class="conf-legend" id="conf-legend" style="display:none">
+          <span class="conf-low">Red</span> &lt;60% · <span class="conf-med">Yellow</span> 60–85% · Normal ≥85%
+        </div>
       </div>
 
     </div>
@@ -481,6 +562,9 @@
     const savePdfBtn = $('save-pdf-btn')
     const output     = $('output')
     const charCount  = $('char-count')
+    const confBtn    = $('conf-btn')
+    const confView   = $('conf-view')
+    const confLegend = $('conf-legend')
     const statusEl   = $('status')
     const progress   = $('progress')
     const progressBar= $('progress-bar')
@@ -495,8 +579,9 @@
     let cancelled     = false
     let srcBytes      = null   // original PDF ArrayBuffer for the output PDF
     let totalPageCount = 0
-    const pageProgress = new Map()
-    const pageHocr     = new Map()  // pageNum → { hocr, scale, pageWidthPts, pageHeightPts }
+    const pageProgress      = new Map()
+    const pageHocr          = new Map()  // pageNum → { hocr, scale, pageWidthPts, pageHeightPts, straightenJpeg }
+    const pageNeedsRotation = new Map()  // pageNum → cardinal angle (90/-90/180) for embedded-text pages
 
     // ── Settings helpers ────────────────────────────────────────────────
     const qualityScale = () => {
@@ -514,6 +599,19 @@
         ? Math.max(1, Math.min(navigator.hardwareConcurrency || 4, 4))
         : parseInt(v, 10)
       return Math.max(1, Math.min(n, nPages))
+    }
+
+    function parsePageRange(str, total) {
+      if (!str.trim()) return new Set(Array.from({ length: total }, (_, i) => i + 1))
+      const pages = new Set()
+      for (const part of str.split(',')) {
+        const m = part.trim().match(/^(\d+)(?:-(\d+))?$/)
+        if (!m) continue
+        const lo = Math.max(1, parseInt(m[1], 10))
+        const hi = m[2] ? Math.min(total, parseInt(m[2], 10)) : lo
+        for (let i = lo; i <= hi; i++) pages.add(i)
+      }
+      return pages.size ? pages : new Set(Array.from({ length: total }, (_, i) => i + 1))
     }
 
     // ── Toast ───────────────────────────────────────────────────────────
@@ -537,6 +635,7 @@
       srcName  = file.name
       fileName.textContent = file.name
       fileName.classList.add('show')
+      $('pdf-password-section').style.display = /\.pdf$/i.test(file.name) ? '' : 'none'
       runBtn.disabled = false
       statusEl.textContent = 'Ready.'
       statusEl.className = 'status'
@@ -560,18 +659,23 @@
       if (e.target.files[0]) { setFile(e.target.files[0]); fileInput.value = '' }
     })
 
-    // ── Canvas preprocessing: grayscale + mild contrast ────────────────
+    // ── Canvas preprocessing: grayscale + darken midtones ────────────────
     function preprocess(canvas) {
+      const mode = document.querySelector('input[name="preprocess"]:checked').value
+      if (mode === 'none') return
       const ctx = canvas.getContext('2d')
       const img = ctx.getImageData(0, 0, canvas.width, canvas.height)
       const d   = img.data
       for (let i = 0; i < d.length; i += 4) {
-        // Luminance grayscale
         const g = (d[i] * 0.299 + d[i+1] * 0.587 + d[i+2] * 0.114) | 0
-        // Gentle contrast boost around mid-grey
-        const c = g < 128
-          ? Math.max(0,   g - (128 - g) * 0.15)
-          : Math.min(255, g + (g - 128) * 0.15)
+        let c
+        if (mode === 'darken') {
+          // Push near-white to pure white; darken midtones — recovers light-gray fill-in text
+          c = g > 210 ? 255 : Math.max(0, Math.round(g * 0.6))
+        } else {
+          // Symmetric contrast boost around midpoint
+          c = Math.min(255, Math.max(0, Math.round((g - 128) * 1.5 + 128)))
+        }
         d[i] = d[i+1] = d[i+2] = c
       }
       ctx.putImageData(img, 0, 0)
@@ -628,10 +732,16 @@
       pageResults.clear()
       pageProgress.clear()
       pageHocr.clear()
+      pageNeedsRotation.clear()
       srcBytes = null
       totalPageCount = 0
       output.value = ''
       charCount.textContent = ''
+      confView.classList.remove('show')
+      confView.innerHTML = ''
+      confBtn.disabled = true
+      confBtn.textContent = '🔍 Confidence'
+      confLegend.style.display = 'none'
       copyBtn.disabled = true
       saveBtn.disabled = true
       runBtn.disabled  = true
@@ -650,15 +760,24 @@
         if (isPDF) {
           statusEl.textContent = 'Loading PDF…'
           const buf = await srcFile.arrayBuffer()
-          srcBytes = buf
-          const bytes = new Uint8Array(buf)
-          const doc = await pdfjsLib.getDocument({ data: bytes }).promise
+          srcBytes = buf                          // keep original for PDF builder
+          const bytes = new Uint8Array(buf.slice(0)) // give PDF.js its own copy it can detach
+          const password = $('pdf-password').value || undefined
+          const doc = await pdfjsLib.getDocument({ data: bytes, password }).promise
           totalPages = doc.numPages
           totalPageCount = totalPages
+
+          const rangeStr = $('page-range').value.trim()
+          const pageSet = parsePageRange(rangeStr, totalPages)
 
           const scale = qualityScale()
           for (let p = 1; p <= totalPages; p++) {
             if (cancelled) throw new Error('Cancelled')
+            if (!pageSet.has(p)) {
+              pageProgress.set(p, 1)
+              updateAggregateProgress(totalPages)
+              continue
+            }
             statusEl.textContent = `Preparing page ${p} of ${totalPages}…`
             const page = await doc.getPage(p)
 
@@ -673,6 +792,23 @@
               emitPage(p, embedded, totalPages)
               pageProgress.set(p, 1)
               updateAggregateProgress(totalPages)
+
+              // When Straighten is on, check for cardinal rotation on embedded-text
+              // pages (lossless fix via pdf-lib setRotation — no rasterisation needed).
+              if ($('straighten-chk').checked) {
+                const detCanvas = await renderPage(page, 1.0)
+                const baseV = projectionVariance(detCanvas, 0)
+                const v90n  = projectionVariance(detCanvas, -90)
+                const v90p  = projectionVariance(detCanvas, 90)
+                const v180  = projectionVariance(detCanvas, 180)
+                console.log(`[straighten] embedded page ${p}: var@0°=${baseV.toFixed(0)} var@-90°=${v90n.toFixed(0)} var@+90°=${v90p.toFixed(0)} var@180°=${v180.toFixed(0)}`)
+                const angle = detectSkewAngle(detCanvas)
+                console.log(`[straighten] embedded page ${p}: detected angle=${angle}°  stored=${angle !== 0 && [90,-90,180,-180].includes(angle)}`)
+                if (angle !== 0 && [90, -90, 180, -180].includes(angle)) {
+                  pageNeedsRotation.set(p, angle)
+                }
+              }
+
               page.cleanup()
               continue
             }
@@ -700,6 +836,8 @@
           statusEl.className = 'status done'
           copyBtn.disabled = output.value.length === 0
           saveBtn.disabled = output.value.length === 0
+          savePdfBtn.disabled = pageNeedsRotation.size === 0
+          if (pageNeedsRotation.size) showToast(`Straightening ${pageNeedsRotation.size} rotated page${pageNeedsRotation.size > 1 ? 's' : ''} in PDF.`, 'success')
           return
         }
 
@@ -732,15 +870,45 @@
         // ── 3. Process in parallel ──────────────────────────────────
         statusEl.textContent = `Recognizing ${jobs.length} page${jobs.length > 1 ? 's' : ''} with ${nWorkers} worker${nWorkers > 1 ? 's' : ''}…`
 
+        const doStraighten = $('straighten-chk').checked
+
         await Promise.all(jobs.map(async ({ pageNum, canvas, scale, pageWidthPts, pageHeightPts }) => {
           if (cancelled) return
+
+          // ── Optional deskew ───────────────────────────────────────────
+          let ocrCanvas = canvas
+          let straightenJpeg = null
+          let correctedWidthPts  = pageWidthPts
+          let correctedHeightPts = pageHeightPts
+
+          if (doStraighten) {
+            const baseV = projectionVariance(canvas, 0)
+            const vn90  = projectionVariance(canvas, -90)
+            const vp90  = projectionVariance(canvas, 90)
+            const v180  = projectionVariance(canvas, 180)
+            console.log(`[straighten] ocr page ${pageNum}: var@0°=${baseV.toFixed(0)} var@-90°=${vn90.toFixed(0)} var@+90°=${vp90.toFixed(0)} var@180°=${v180.toFixed(0)}`)
+            const angle = detectSkewAngle(canvas)
+            console.log(`[straighten] ocr page ${pageNum}: detected=${angle}°  applying=${angle !== 0}`)
+            if (angle !== 0) {
+              ocrCanvas = rotateCanvas(canvas, angle)
+              correctedWidthPts  = ocrCanvas.width  / scale
+              correctedHeightPts = ocrCanvas.height / scale
+              straightenJpeg = await canvasToJpeg(ocrCanvas)
+            }
+          }
+
           // Tag each job so the logger knows which page it belongs to
-          const job = scheduler.addJob('recognize', canvas, undefined, String(pageNum))
+          const job = scheduler.addJob('recognize', ocrCanvas, undefined, String(pageNum))
           const { data: { text, hocr } } = await job
           if (cancelled) return
           pageProgress.set(pageNum, 1)
           emitPage(pageNum, text, totalPages)
-          if (hocr) pageHocr.set(pageNum, { hocr, scale, pageWidthPts, pageHeightPts })
+          if (hocr) pageHocr.set(pageNum, {
+            hocr, scale,
+            pageWidthPts:  correctedWidthPts,
+            pageHeightPts: correctedHeightPts,
+            straightenJpeg,
+          })
           updateAggregateProgress(totalPages)
           statusEl.textContent = `Recognized ${pageResults.size} of ${totalPages} pages…`
         }))
@@ -755,18 +923,27 @@
         statusEl.className = 'status done'
         copyBtn.disabled = output.value.length === 0
         saveBtn.disabled = output.value.length === 0
+        confBtn.disabled = pageHocr.size === 0
         savePdfBtn.disabled = pageHocr.size === 0
         showToast('Text extracted.', 'success')
 
       } catch (err) {
-        if (err.message === 'Cancelled') {
+        if (err?.message === 'Cancelled') {
           statusEl.textContent = 'Cancelled.'
           statusEl.className = 'status'
-        } else {
-          console.error(err)
-          statusEl.textContent = 'Error: ' + (err.message || 'unknown')
+        } else if (err?.name === 'PasswordException') {
+          const msg = err.code === 1 ? 'PDF is password-protected — enter the password.' : 'Incorrect PDF password.'
+          statusEl.textContent = msg
           statusEl.className = 'status error'
-          showToast('OCR failed: ' + err.message, 'error')
+          showToast(msg, 'error')
+        } else {
+          console.error('[folio-ocr] run error:', err)
+          const msg = err?.message || err?.name || String(err) || 'unknown error'
+          const detail = err?.stack ? '\n' + err.stack : ''
+          console.error('[folio-ocr] stack:', detail)
+          statusEl.textContent = 'Error: ' + msg
+          statusEl.className = 'status error'
+          showToast('OCR failed: ' + msg, 'error')
         }
       } finally {
         if (scheduler) {
@@ -800,6 +977,100 @@
       }
     })
 
+    // ── Deskew helpers ─────────────────────────────────────────────────
+
+    // Compute horizontal-projection variance of `canvas` after rotating by `angleDeg`.
+    // Higher variance → text rows are more horizontal → better orientation.
+    function projectionVariance(canvas, angleDeg) {
+      const maxW = 400
+      const scale = Math.min(1, maxW / canvas.width)
+      const rad = angleDeg * Math.PI / 180
+      const sin = Math.abs(Math.sin(rad)), cos = Math.abs(Math.cos(rad))
+      const w = Math.round(canvas.width  * scale)
+      const h = Math.round(canvas.height * scale)
+      // Bounding box of rotated image
+      const bw = Math.ceil(w * cos + h * sin)
+      const bh = Math.ceil(w * sin + h * cos)
+      const tmp = document.createElement('canvas')
+      tmp.width = bw; tmp.height = bh
+      const ctx = tmp.getContext('2d')
+      ctx.fillStyle = '#fff'
+      ctx.fillRect(0, 0, bw, bh)
+      ctx.save()
+      ctx.translate(bw / 2, bh / 2)
+      ctx.rotate(rad)
+      ctx.drawImage(canvas, -w / 2, -h / 2, w, h)
+      ctx.restore()
+      const { data } = ctx.getImageData(0, 0, bw, bh)
+      const profile = new Float32Array(bh)
+      for (let y = 0; y < bh; y++) {
+        let dark = 0
+        for (let x = 0; x < bw; x++) {
+          if (data[(y * bw + x) * 4] < 128) dark++
+        }
+        profile[y] = dark
+      }
+      const mean = profile.reduce((a, b) => a + b, 0) / bh
+      return profile.reduce((s, v) => s + (v - mean) ** 2, 0) / bh
+    }
+
+    // Returns the correction angle (degrees) to apply to the canvas to straighten it.
+    // Returns 0 if confidence is too low (sparse pages, mostly whitespace, heavy borders).
+    function detectSkewAngle(canvas) {
+      const baseVar = projectionVariance(canvas, 0)
+
+      // Coarse pass: ±90° only — 180° is excluded because projection profile
+      // cannot distinguish 0° from 180° (horizontal rows look identical both ways).
+      const coarse = [0, -90, 90, -45, 45, -135, 135]
+      let bestAngle = 0, bestVar = baseVar
+      for (const a of coarse) {
+        const v = projectionVariance(canvas, a)
+        if (v > bestVar) { bestVar = v; bestAngle = a }
+      }
+      // Fine pass: ±5° around best coarse angle at 0.25° steps
+      for (let d = -5; d <= 5; d += 0.25) {
+        if (Math.abs(d) < 0.01) continue
+        const v = projectionVariance(canvas, bestAngle + d)
+        if (v > bestVar) { bestVar = v; bestAngle = bestAngle + d }
+      }
+      // Confidence gate: ±90° needs only 5% improvement; fine angles need 20%.
+      const isCardinal = [90, -90].some(s => Math.abs(bestAngle - s) < 5)
+      if (bestVar < baseVar * (isCardinal ? 1.05 : 1.20)) return 0
+
+      // Snap cardinal angles to exact integers to avoid float drift
+      for (const snap of [0, 90, -90]) {
+        if (Math.abs(bestAngle - snap) < 0.5) return snap
+      }
+      return bestAngle
+    }
+
+    // Returns a new canvas rotated by `angleDeg` with white fill.
+    function rotateCanvas(src, angleDeg) {
+      if (angleDeg === 0) return src
+      const rad = angleDeg * Math.PI / 180
+      const sin = Math.abs(Math.sin(rad)), cos = Math.abs(Math.cos(rad))
+      const w = src.width, h = src.height
+      const nw = Math.round(w * cos + h * sin)
+      const nh = Math.round(w * sin + h * cos)
+      const out = document.createElement('canvas')
+      out.width = nw; out.height = nh
+      const ctx = out.getContext('2d')
+      ctx.fillStyle = '#fff'
+      ctx.fillRect(0, 0, nw, nh)
+      ctx.save()
+      ctx.translate(nw / 2, nh / 2)
+      ctx.rotate(rad)
+      ctx.drawImage(src, -w / 2, -h / 2)
+      ctx.restore()
+      return out
+    }
+
+    // Encode canvas as JPEG bytes (Uint8Array).
+    async function canvasToJpeg(canvas) {
+      const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.92))
+      return new Uint8Array(await blob.arrayBuffer())
+    }
+
     // ── hOCR parser ────────────────────────────────────────────────────
     function parseHocr(hocrStr) {
       const doc = new DOMParser().parseFromString(hocrStr, 'text/html')
@@ -814,55 +1085,111 @@
       return words
     }
 
+    // ── Add invisible text layer to a pdf-lib page ─────────────────────
+    function addTextLayer(page, { hocr, scale, pageHeightPts }, font) {
+      const { rgb } = PDFLib
+      for (const { text, x0, y0, x1, y1 } of parseHocr(hocr)) {
+        const xPdf = x0 / scale
+        const yPdf = pageHeightPts - y1 / scale
+        const size = Math.max(4, (y1 - y0) / scale * 0.85)
+        try {
+          page.drawText(text, { x: xPdf, y: yPdf, size, font, color: rgb(0,0,0), opacity: 0 })
+        } catch { /* skip glyphs the font can't encode */ }
+      }
+    }
+
     // ── Build searchable PDF ────────────────────────────────────────────
     async function buildSearchablePdf() {
-      const { PDFDocument, StandardFonts, rgb } = PDFLib
-
-      let pdfDoc
+      const { PDFDocument, StandardFonts } = PDFLib
       const isPDF = srcBytes != null
 
-      if (isPDF) {
-        pdfDoc = await PDFDocument.load(srcBytes)
-      } else {
-        pdfDoc = await PDFDocument.create()
-        // For image source: embed image and add a page
-        const imgData = await srcFile.arrayBuffer()
-        const name = (srcName || '').toLowerCase()
-        let img
-        if (/\.png$/.test(name)) {
-          img = await pdfDoc.embedPng(imgData)
+      if (!isPDF) {
+        // ── Image source: single-page PDF ─────────────────────────────
+        const outDoc = await PDFDocument.create()
+        const font   = await outDoc.embedFont(StandardFonts.Helvetica)
+        const data   = pageHocr.get(1)
+
+        if (data?.straightenJpeg) {
+          const img  = await outDoc.embedJpg(data.straightenJpeg)
+          const page = outDoc.addPage([data.pageWidthPts, data.pageHeightPts])
+          page.drawImage(img, { x: 0, y: 0, width: data.pageWidthPts, height: data.pageHeightPts })
+          if (data.hocr) addTextLayer(page, data, font)
         } else {
-          img = await pdfDoc.embedJpg(imgData)
+          const imgData = await srcFile.arrayBuffer()
+          const name    = (srcName || '').toLowerCase()
+          const img     = /\.png$/.test(name)
+            ? await outDoc.embedPng(imgData)
+            : await outDoc.embedJpg(imgData)
+          const page = outDoc.addPage([img.width, img.height])
+          page.drawImage(img, { x: 0, y: 0, width: img.width, height: img.height })
+          if (data?.hocr) addTextLayer(page, data, font)
         }
-        const page = pdfDoc.addPage([img.width, img.height])
-        page.drawImage(img, { x: 0, y: 0, width: img.width, height: img.height })
+        return outDoc.save()
       }
 
-      const font = await pdfDoc.embedFont(StandardFonts.Helvetica)
-      const pages = pdfDoc.getPages()
+      // ── PDF source ────────────────────────────────────────────────────
+      const needsRaster = [...pageHocr.values()].some(d => d.straightenJpeg)
 
-      for (const [pageNum, { hocr, scale, pageHeightPts }] of pageHocr) {
-        const page = pages[pageNum - 1]
-        if (!page) continue
-        const words = parseHocr(hocr)
-        for (const { text, x0, y0, x1, y1 } of words) {
-          const xPdf   = x0 / scale
-          const yPdf   = pageHeightPts - y1 / scale   // flip: PDF origin is bottom-left
-          const hPdf   = (y1 - y0) / scale
-          const size   = Math.max(4, hPdf * 0.85)
-          try {
-            page.drawText(text, {
-              x: xPdf, y: yPdf,
-              size,
-              font,
-              color: rgb(0, 0, 0),
-              opacity: 0,
-            })
-          } catch { /* skip glyphs the font can't encode */ }
+      const applyRotations = (pages) => {
+        for (const [pageNum, angle] of pageNeedsRotation) {
+          const page = pages[pageNum - 1]
+          if (page) page.setRotation(PDFLib.degrees(-angle))
         }
       }
 
-      return pdfDoc.save()
+      if (!needsRaster && pageNeedsRotation.size === 0) {
+        // Fast path: add text layer to original pages in-place, no structural changes
+        const pdfDoc = await PDFDocument.load(srcBytes)
+        const font   = await pdfDoc.embedFont(StandardFonts.Helvetica)
+        const pages  = pdfDoc.getPages()
+        for (const [pageNum, data] of pageHocr) {
+          const page = pages[pageNum - 1]
+          if (page && data.hocr) addTextLayer(page, data, font)
+        }
+        return pdfDoc.save()
+      }
+
+      if (!needsRaster && pageNeedsRotation.size > 0) {
+        // Fast path + cardinal rotation: load original, set rotation on flagged pages
+        const pdfDoc = await PDFDocument.load(srcBytes)
+        const font   = await pdfDoc.embedFont(StandardFonts.Helvetica)
+        const pages  = pdfDoc.getPages()
+        for (const [pageNum, data] of pageHocr) {
+          const page = pages[pageNum - 1]
+          if (page && data.hocr) addTextLayer(page, data, font)
+        }
+        applyRotations(pages)
+        return pdfDoc.save()
+      }
+
+      // Slow path: rebuild document page-by-page (some pages rasterised)
+      const origDoc = await PDFDocument.load(srcBytes)
+      const outDoc  = await PDFDocument.create()
+      const font    = await outDoc.embedFont(StandardFonts.Helvetica)
+      const nPages  = origDoc.getPageCount()
+
+      for (let i = 0; i < nPages; i++) {
+        const pageNum = i + 1
+        const data    = pageHocr.get(pageNum)
+
+        if (data?.straightenJpeg) {
+          // Rasterised deskewed page
+          const img  = await outDoc.embedJpg(data.straightenJpeg)
+          const page = outDoc.addPage([data.pageWidthPts, data.pageHeightPts])
+          page.drawImage(img, { x: 0, y: 0, width: data.pageWidthPts, height: data.pageHeightPts })
+          if (data.hocr) addTextLayer(page, data, font)
+        } else {
+          // Copy original page, preserving all content
+          const [copied] = await outDoc.copyPages(origDoc, [i])
+          outDoc.addPage(copied)
+          const outPage = outDoc.getPages()[outDoc.getPageCount() - 1]
+          if (data?.hocr) addTextLayer(outPage, data, font)
+          // Apply cardinal rotation if this embedded-text page needs it
+          const rotAngle = pageNeedsRotation.get(pageNum)
+          if (rotAngle) outPage.setRotation(PDFLib.degrees(-rotAngle))
+        }
+      }
+      return outDoc.save()
     }
 
     // ── Save searchable PDF ─────────────────────────────────────────────
@@ -935,6 +1262,48 @@
       } catch (e) {
         if (e.name !== 'AbortError') showToast('Save failed: ' + e.message, 'error')
       }
+    })
+
+    // ── Confidence highlighting ─────────────────────────────────────────
+    function parseHocrWithConfidence(hocrStr) {
+      const doc = new DOMParser().parseFromString(hocrStr, 'text/html')
+      const tokens = []
+      doc.querySelectorAll('.ocr_line').forEach(line => {
+        line.querySelectorAll('.ocrx_word').forEach(span => {
+          const text = span.textContent.trim()
+          if (!text) return
+          const title = span.getAttribute('title') || ''
+          const m = title.match(/x_wconf\s+(\d+)/)
+          tokens.push({ text, conf: m ? parseInt(m[1], 10) : 100 })
+        })
+        tokens.push({ text: '\n', conf: -1 })
+      })
+      return tokens
+    }
+
+    function buildConfidenceHtml() {
+      const parts = []
+      for (const [pageNum, data] of [...pageHocr.entries()].sort((a, b) => a[0] - b[0])) {
+        if (!data.hocr) continue
+        parts.push(`<div class="conf-page-label">── Page ${pageNum} ──</div>`)
+        let html = '<div>'
+        for (const { text, conf } of parseHocrWithConfidence(data.hocr)) {
+          if (text === '\n') { html += '<br>'; continue }
+          const esc = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+          const cls = conf < 60 ? 'conf-low' : conf < 85 ? 'conf-med' : ''
+          html += cls ? `<span class="${cls}">${esc}</span> ` : `${esc} `
+        }
+        html += '</div>'
+        parts.push(html)
+      }
+      return parts.join('')
+    }
+
+    confBtn.addEventListener('click', () => {
+      const showing = confView.classList.toggle('show')
+      confBtn.textContent = showing ? '📄 Text view' : '🔍 Confidence'
+      confLegend.style.display = showing ? '' : 'none'
+      if (showing) confView.innerHTML = buildConfidenceHtml()
     })
   </script>
 </body>
